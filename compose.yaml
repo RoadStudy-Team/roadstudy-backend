@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:17.9
+    environment:
+      POSTGRES_DB: roadstudy
+      POSTGRES_USER: roadstudy
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
+    volumes:
+      - roadstudy-db:/var/lib/postgresql/data
+
+volumes:
+  roadstudy-db:
