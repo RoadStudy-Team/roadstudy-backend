@@ -1,5 +1,8 @@
 package com.roadstudy.global.exception;
 
+import lombok.Getter;
+
+@Getter
 public abstract class ApplicationException extends RuntimeException {
     private final String code;
     private final FailureType failureType;
@@ -12,13 +15,5 @@ public abstract class ApplicationException extends RuntimeException {
         super(message, cause);
         this.code = code;
         this.failureType = failureType;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public FailureType getFailureType() {
-        return failureType;
     }
 }

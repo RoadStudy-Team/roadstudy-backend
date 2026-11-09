@@ -6,6 +6,7 @@ import com.roadstudy.global.exception.GlobalExceptionHandler;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -18,6 +19,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@DisplayName("전역 예외 처리")
 class GlobalExceptionHandlerTests {
     private MockMvc mvc;
 
@@ -33,6 +35,7 @@ class GlobalExceptionHandlerTests {
         "INVALID_INPUT,400", "NOT_FOUND,404", "CONFLICT,409",
         "UNPROCESSABLE_CONTENT,422", "EXTERNAL_SERVICE_FAILURE,502", "EXTERNAL_SERVICE_TIMEOUT,504"
     })
+    @DisplayName("실패 유형에 해당하는 HTTP 상태와 오류 코드를 반환한다")
     void mapsApplicationErrors(FailureType type, int statusCode) throws Exception {
         mvc.perform(get("/failure/{type}", type))
                 .andExpect(status().is(statusCode))
@@ -42,6 +45,7 @@ class GlobalExceptionHandlerTests {
     }
 
     @Test
+    @DisplayName("요청 검증 실패 시 400을 반환한다")
     void handlesValidation() throws Exception {
         mvc.perform(post("/validate").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest())
@@ -49,6 +53,7 @@ class GlobalExceptionHandlerTests {
     }
 
     @Test
+    @DisplayName("업로드 허용 용량을 초과하면 413을 반환한다")
     void handlesUploadLimit() throws Exception {
         mvc.perform(get("/upload-limit"))
                 .andExpect(status().isPayloadTooLarge())
@@ -56,11 +61,12 @@ class GlobalExceptionHandlerTests {
     }
 
     @Test
+    @DisplayName("예상하지 못한 예외의 내부 메시지를 숨기고 500을 반환한다")
     void sanitizesUnexpectedErrors() throws Exception {
         mvc.perform(get("/unexpected"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
-                .andExpect(jsonPath("$.detail").value("An unexpected error occurred."));
+                .andExpect(jsonPath("$.detail").value("서버에서 예상하지 못한 오류가 발생했습니다."));
     }
 
     @RestController
@@ -81,7 +87,7 @@ class GlobalExceptionHandlerTests {
 
         @GetMapping("/unexpected")
         void unexpected() {
-            throw new IllegalArgumentException("Private diagnostic detail");
+            throw new IllegalArgumentException("외부에 공개할 수 없는 오류 정보");
         }
     }
 
@@ -90,7 +96,7 @@ class GlobalExceptionHandlerTests {
 
     private static class StudyFailure extends ApplicationException {
         StudyFailure(FailureType type) {
-            super("STUDY_FAILURE", "Study request failed.", type);
+            super("STUDY_FAILURE", "학습 요청을 처리할 수 없습니다.", type);
         }
     }
 }

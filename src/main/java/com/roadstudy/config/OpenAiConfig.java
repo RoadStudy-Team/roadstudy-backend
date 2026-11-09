@@ -16,7 +16,7 @@ public class OpenAiConfig {
     @Bean
     @Lazy
     RestClient openAiRestClient(RestClient.Builder builder, @Value("${OPENAI_API_KEY:}") String apiKey) {
-        Assert.hasText(apiKey, "Set OPENAI_API_KEY to use the OpenAI client.");
+        Assert.hasText(apiKey, "OpenAI 클라이언트를 사용하려면 OPENAI_API_KEY 환경변수를 설정해야 합니다.");
 
         var httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 

@@ -1,7 +1,6 @@
 package com.roadstudy.global.exception;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -16,9 +15,9 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ApplicationException.class)
     public ProblemDetail handleApplicationException(ApplicationException ex) {
@@ -46,15 +45,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             Exception ex, Object body, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         ProblemDetail response;
         if (ex instanceof MaxUploadSizeExceededException) {
-            response = problem(status, "UPLOAD_TOO_LARGE", "Upload exceeds the allowed size.");
+            response = problem(status, "UPLOAD_TOO_LARGE", "업로드 파일이 허용 용량을 초과했습니다.");
         } else if (status.is4xxClientError() && (ex instanceof MethodArgumentNotValidException
                 || ex instanceof HandlerMethodValidationException)) {
-            response = problem(status, "VALIDATION_FAILED", "Request validation failed.");
+            response = problem(status, "VALIDATION_FAILED", "요청의 입력값이 올바르지 않습니다.");
         } else if (status.value() == 500) {
-            log.error("Unhandled request failure of type {}", ex.getClass().getName());
-            response = problem(status, "INTERNAL_ERROR", "An unexpected error occurred.");
+            log.error("요청 처리 중 예상하지 못한 예외가 발생했습니다. 예외 유형 {}", ex.getClass().getName());
+            response = problem(status, "INTERNAL_ERROR", "서버에서 예상하지 못한 오류가 발생했습니다.");
         } else {
-            response = problem(status, "HTTP_" + status.value(), "The request could not be processed.");
+            response = problem(status, "HTTP_" + status.value(), "요청을 처리할 수 없습니다.");
         }
         return super.handleExceptionInternal(ex, response, headers, status, request);
     }
