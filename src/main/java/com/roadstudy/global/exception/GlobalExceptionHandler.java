@@ -25,6 +25,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             case INVALID_INPUT -> HttpStatus.BAD_REQUEST;
             case NOT_FOUND -> HttpStatus.NOT_FOUND;
             case CONFLICT -> HttpStatus.CONFLICT;
+            case PAYLOAD_TOO_LARGE -> HttpStatus.PAYLOAD_TOO_LARGE;
             case UNPROCESSABLE_CONTENT -> HttpStatus.UNPROCESSABLE_ENTITY;
             case EXTERNAL_SERVICE_FAILURE -> HttpStatus.BAD_GATEWAY;
             case EXTERNAL_SERVICE_TIMEOUT -> HttpStatus.GATEWAY_TIMEOUT;
@@ -45,7 +46,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             Exception ex, Object body, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         ProblemDetail response;
         if (ex instanceof MaxUploadSizeExceededException) {
-            response = problem(status, "UPLOAD_TOO_LARGE", "업로드 파일이 허용 용량을 초과했습니다.");
+            response = problem(status, "FILE_TOO_LARGE", "업로드 파일이 허용 용량을 초과했습니다.");
         } else if (status.is4xxClientError() && (ex instanceof MethodArgumentNotValidException
                 || ex instanceof HandlerMethodValidationException)) {
             response = problem(status, "VALIDATION_FAILED", "요청의 입력값이 올바르지 않습니다.");
