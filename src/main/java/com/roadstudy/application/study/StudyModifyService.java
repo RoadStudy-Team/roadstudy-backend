@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class StudyModifyService implements ExtractStudyText {
-    private static final int MAX_FILE_BYTES = 10 * 1024 * 1024;
+    private static final int MAX_FILE_BYTES = 50 * 1024 * 1024;
 
     private final DocumentReader documentReader;
 
