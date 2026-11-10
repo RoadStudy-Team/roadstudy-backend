@@ -32,7 +32,7 @@ class GlobalExceptionHandlerTests {
 
     @ParameterizedTest
     @CsvSource({
-        "INVALID_INPUT,400", "NOT_FOUND,404", "CONFLICT,409",
+        "INVALID_INPUT,400", "NOT_FOUND,404", "CONFLICT,409", "PAYLOAD_TOO_LARGE,413",
         "UNPROCESSABLE_CONTENT,422", "EXTERNAL_SERVICE_FAILURE,502", "EXTERNAL_SERVICE_TIMEOUT,504"
     })
     @DisplayName("실패 유형에 해당하는 HTTP 상태와 오류 코드를 반환한다")
@@ -57,7 +57,7 @@ class GlobalExceptionHandlerTests {
     void handlesUploadLimit() throws Exception {
         mvc.perform(get("/upload-limit"))
                 .andExpect(status().isPayloadTooLarge())
-                .andExpect(jsonPath("$.code").value("UPLOAD_TOO_LARGE"));
+                .andExpect(jsonPath("$.code").value("FILE_TOO_LARGE"));
     }
 
     @Test
