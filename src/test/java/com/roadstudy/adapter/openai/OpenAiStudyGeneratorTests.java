@@ -1,5 +1,6 @@
 package com.roadstudy.adapter.openai;
 
+import java.net.ConnectException;
 import java.net.http.HttpTimeoutException;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +122,24 @@ class OpenAiStudyGeneratorTests {
                 .andRespond(withException(new HttpTimeoutException("timeout")));
 
         assertFailure(FailureType.EXTERNAL_SERVICE_TIMEOUT, "STUDY_GENERATION_TIMEOUT");
+    }
+
+    @Test
+    @DisplayName("연결 거부를 타임아웃과 구분해 호출 실패로 처리한다")
+    void handlesConnectionRefused() {
+        server.expect(requestTo("https://example.test/v1/responses"))
+                .andRespond(withException(new ConnectException("connection refused")));
+
+        assertFailure(FailureType.EXTERNAL_SERVICE_FAILURE, "STUDY_GENERATION_FAILED");
+    }
+
+    @Test
+    @DisplayName("외부 서비스가 본문 없는 성공 상태를 반환해도 결과 오류로 처리한다")
+    void rejectsEmptyResponseBody() {
+        server.expect(requestTo("https://example.test/v1/responses"))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        assertFailure(FailureType.EXTERNAL_SERVICE_FAILURE, "INVALID_STUDY_EXPLANATION");
     }
 
     private void assertFailure(FailureType type, String code) {

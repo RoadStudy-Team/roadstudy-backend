@@ -9,6 +9,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.roadstudy.application.study.StudyExplanation;
 import com.roadstudy.application.study.exception.StudyExplanationException;
 import com.roadstudy.application.study.port.out.StudyGenerator;
@@ -44,13 +45,13 @@ public class OpenAiStudyGenerator implements StudyGenerator {
                             "explanationScript", STRING_SCHEMA)));
 
     private final RestClient client;
-    private final ObjectMapper objectMapper;
+    private final ObjectReader jsonReader;
     private final String model;
 
     public OpenAiStudyGenerator(@Lazy @Qualifier("openAiRestClient") RestClient client,
                                 ObjectMapper objectMapper, @Value("${OPENAI_MODEL:gpt-5.4-mini}") String model) {
         this.client = client;
-        this.objectMapper = objectMapper;
+        this.jsonReader = objectMapper.reader().with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
         this.model = model;
     }
 
@@ -63,25 +64,29 @@ public class OpenAiStudyGenerator implements StudyGenerator {
                     .body(Map.of("model", model, "instructions", INSTRUCTIONS, "input", text,
                             "text", Map.of("format", FORMAT), "max_output_tokens", 4_000, "store", false))
                     .retrieve().body(String.class);
+
             if (body == null) {
                 throw StudyExplanationException.invalidResult();
             }
-            response = objectMapper.readTree(body);
+
+            response = jsonReader.readTree(body);
+
         } catch (ResourceAccessException ex) {
-            if (ex.contains(HttpTimeoutException.class) || ex.contains(SocketTimeoutException.class)) {
+            if (ex.contains(HttpTimeoutException.class) || ex.contains(SocketTimeoutException.class))
                 throw StudyExplanationException.generationTimedOut();
-            }
+
             throw StudyExplanationException.generationFailed();
         } catch (RestClientResponseException ex) {
-            if (ex.getStatusCode().value() == 408 || ex.getStatusCode().value() == 504) {
+            if (ex.getStatusCode().value() == 408 || ex.getStatusCode().value() == 504)
                 throw StudyExplanationException.generationTimedOut();
-            }
+
             throw StudyExplanationException.generationFailed();
         } catch (RestClientException ex) {
             throw StudyExplanationException.generationFailed();
         } catch (JsonProcessingException ex) {
             throw StudyExplanationException.invalidResult();
         }
+
         return parseExplanation(response);
     }
 
@@ -104,10 +109,9 @@ public class OpenAiStudyGenerator implements StudyGenerator {
                 }
             }
         }
+
         try {
-            JsonNode result = objectMapper.reader()
-                    .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
-                    .readTree(output.toString());
+            JsonNode result = jsonReader.readTree(output.toString());
             return new StudyExplanation(requiredText(result, "title"), requiredText(result, "summary"),
                     requiredText(result, "explanationScript"));
         } catch (JsonProcessingException ex) {

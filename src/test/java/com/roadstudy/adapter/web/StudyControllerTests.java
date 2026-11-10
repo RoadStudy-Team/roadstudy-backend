@@ -64,11 +64,47 @@ class StudyControllerTests {
     }
 
     @Test
+    @DisplayName("대본 생성 요청에 파일 파트가 없으면 400을 반환하고 생성기를 호출하지 않는다")
+    void rejectsGenerationWithoutFile() throws Exception {
+        mvc.perform(multipart(GENERATE_ENDPOINT))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+        verifyNoInteractions(generator);
+    }
+
+    @Test
+    @DisplayName("PDF 확장자로 위장한 파일은 대본 생성 전에 400으로 거부한다")
+    void rejectsDisguisedGenerationFile() throws Exception {
+        mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", new byte[]{1})))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_PDF"));
+        verifyNoInteractions(generator);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    @DisplayName("외부 호출 실패와 잘못된 결과는 각각의 오류 코드로 502를 반환한다")
+    void returnsGenerationFailure(boolean invalidResult) throws Exception {
+        var failure = invalidResult
+                ? StudyExplanationException.invalidResult()
+                : StudyExplanationException.generationFailed();
+        when(generator.generate("Hello PDF")).thenThrow(failure);
+
+        mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", pdf("Hello PDF"))))
+                .andExpect(status().isBadGateway())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(502))
+                .andExpect(jsonPath("$.code").value(
+                        invalidResult ? "INVALID_STUDY_EXPLANATION" : "STUDY_GENERATION_FAILED"));
+    }
+
+    @Test
     @DisplayName("PDF 텍스트가 비어 있으면 생성기를 호출하지 않고 422를 반환한다")
     void rejectsBlankGenerationInput() throws Exception {
         mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", pdf(" "))))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("PDF_TEXT_EMPTY"));
         verifyNoInteractions(generator);
     }
 
