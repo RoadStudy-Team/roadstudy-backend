@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface StudyTextApiDocs {
-    @Operation(summary = "PDF 텍스트 추출", description = "최대 10MB의 PDF를 업로드해 전체 페이지의 텍스트를 추출합니다.")
+    @Operation(summary = "PDF 텍스트 추출", description = "최대 50MB의 PDF를 업로드해 전체 페이지의 텍스트를 추출합니다.")
     @ApiResponse(responseCode = "200", description = "텍스트 추출 성공",
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                     schema = @Schema(implementation = ExtractTextResponse.class)))
