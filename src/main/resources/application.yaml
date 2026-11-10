@@ -1,4 +1,8 @@
 spring:
+  config:
+    import: 'optional:file:.env[.properties]'
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
   application:
     name: roadstudy
   datasource:
@@ -12,12 +16,3 @@ spring:
       max-file-size: 10MB
       max-request-size: 11MB
 
----
-spring:
-  config:
-    import: 'optional:file:./.env[.properties]'
-    activate:
-      on-profile: local
-  jpa:
-    hibernate:
-      ddl-auto: update
