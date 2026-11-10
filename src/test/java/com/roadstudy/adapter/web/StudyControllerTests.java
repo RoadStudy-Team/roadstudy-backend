@@ -43,7 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class StudyControllerTests {
     private static final String ENDPOINT = "/api/studies/extract-text";
     private static final String GENERATE_ENDPOINT = "/api/studies/generate-explanation";
-    private static final int MAX_FILE_BYTES = 10 * 1024 * 1024;
+    private static final int MAX_FILE_BYTES = 50 * 1024 * 1024;
 
     private final StudyGenerator generator = mock(StudyGenerator.class);
     private final StudyModifyService service = new StudyModifyService(new PdfBoxDocumentReader(), generator);
@@ -183,13 +183,13 @@ class StudyControllerTests {
     }
 
     @Test
-    @DisplayName("10MB를 초과한 파일을 업로드하면 413을 반환한다")
+    @DisplayName("50MB를 1바이트 초과한 파일을 업로드하면 413을 반환한다")
     void rejectsOversizedFile() throws Exception {
         expectProblem(pdfFile("large.pdf", new byte[MAX_FILE_BYTES + 1]), 413, "FILE_TOO_LARGE");
     }
 
     @Test
-    @DisplayName("정확히 10MB인 정상 PDF를 허용한다")
+    @DisplayName("정확히 50MB인 정상 PDF를 허용한다")
     void acceptsPdfAtSizeLimit() throws Exception {
         byte[] original = pdf("Boundary");
         byte[] padded = new byte[MAX_FILE_BYTES];

@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface StudyControllerDocs {
-    @Operation(summary = "PDF 텍스트 추출", description = "최대 10MB의 PDF를 업로드해 전체 페이지의 텍스트를 추출합니다.")
+    @Operation(summary = "PDF 텍스트 추출", description = "최대 50MB의 PDF를 업로드해 전체 페이지의 텍스트를 추출합니다.")
     @ApiResponse(responseCode = "200", description = "텍스트 추출 성공",
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                     schema = @Schema(implementation = ExtractTextResponse.class)))
@@ -29,7 +29,7 @@ public interface StudyControllerDocs {
                     schema = @Schema(implementation = ProblemDetail.class)))
     ResponseEntity<ExtractTextResponse> extractText(MultipartFile file) throws IOException;
 
-    @Operation(summary = "학습 설명 대본 생성", description = "PDF 텍스트에서 약 5분 분량의 한국어 학습 설명 대본을 생성합니다.")
+    @Operation(summary = "학습 설명 대본 생성", description = "최대 50MB의 PDF에서 약 5분 분량의 한국어 학습 설명 대본을 생성합니다.")
     @ApiResponse(responseCode = "200", description = "대본 생성 성공",
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                     schema = @Schema(implementation = StudyExplanationResponse.class)))

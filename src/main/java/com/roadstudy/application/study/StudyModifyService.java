@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class StudyModifyService implements ExtractStudyText, GenerateStudyExplanation {
-    private static final int MAX_FILE_BYTES = 10 * 1024 * 1024;
+    private static final int MAX_FILE_BYTES = 50 * 1024 * 1024;
     private static final int MAX_GENERATION_CHARACTERS = 60_000;
 
     private final DocumentReader documentReader;
