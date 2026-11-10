@@ -8,6 +8,9 @@ import java.util.Arrays;
 
 import com.roadstudy.adapter.pdf.PdfBoxDocumentReader;
 import com.roadstudy.application.study.StudyModifyService;
+import com.roadstudy.application.study.StudyExplanation;
+import com.roadstudy.application.study.exception.StudyExplanationException;
+import com.roadstudy.application.study.port.out.StudyGenerator;
 import com.roadstudy.global.exception.GlobalExceptionHandler;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -27,6 +30,9 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -36,12 +42,46 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("PDF 텍스트 추출 API")
 class StudyControllerTests {
     private static final String ENDPOINT = "/api/studies/extract-text";
+    private static final String GENERATE_ENDPOINT = "/api/studies/generate-explanation";
     private static final int MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(
-                    new StudyController(new StudyModifyService(new PdfBoxDocumentReader())))
+    private final StudyGenerator generator = mock(StudyGenerator.class);
+    private final StudyModifyService service = new StudyModifyService(new PdfBoxDocumentReader(), generator);
+    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new StudyController(service, service))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
+
+    @Test
+    @DisplayName("PDF에서 추출한 텍스트로 생성한 제목, 요약, 대본을 반환한다")
+    void generatesExplanation() throws Exception {
+        when(generator.generate("Hello PDF")).thenReturn(new StudyExplanation("제목", "요약", "설명"));
+
+        mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", pdf("Hello PDF"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("제목"))
+                .andExpect(jsonPath("$.summary").value("요약"))
+                .andExpect(jsonPath("$.explanationScript").value("설명"));
+    }
+
+    @Test
+    @DisplayName("PDF 텍스트가 비어 있으면 생성기를 호출하지 않고 422를 반환한다")
+    void rejectsBlankGenerationInput() throws Exception {
+        mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", pdf(" "))))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+        verifyNoInteractions(generator);
+    }
+
+    @Test
+    @DisplayName("생성 타임아웃을 504 ProblemDetail로 반환한다")
+    void returnsGenerationTimeout() throws Exception {
+        when(generator.generate("Hello PDF")).thenThrow(StudyExplanationException.generationTimedOut());
+
+        mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", pdf("Hello PDF"))))
+                .andExpect(status().isGatewayTimeout())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("STUDY_GENERATION_TIMEOUT"));
+    }
 
     @Test
     @DisplayName("PDF 파일을 올리면 파일명, 페이지 수, 문자 수와 텍스트를 반환한다")
