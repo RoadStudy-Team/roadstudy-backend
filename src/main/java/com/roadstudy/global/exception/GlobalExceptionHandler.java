@@ -29,6 +29,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             case UNPROCESSABLE_CONTENT -> HttpStatus.UNPROCESSABLE_ENTITY;
             case EXTERNAL_SERVICE_FAILURE -> HttpStatus.BAD_GATEWAY;
             case EXTERNAL_SERVICE_TIMEOUT -> HttpStatus.GATEWAY_TIMEOUT;
+            case INTERNAL_FAILURE -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
         return problem(status, ex.getCode(), ex.getMessage());
     }
