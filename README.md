@@ -1,6 +1,6 @@
 # RoadStudy Backend
 
-RoadStudy는 PDF 학습 자료를 AI 설명 대본과 음성으로 변환해 차량에서 복습할 수 있게 하는 현대차 공모전 프로젝트다. 현재 API로 제공하는 기능은 PDF 텍스트 추출이다.
+RoadStudy는 PDF 학습 자료를 AI 설명 대본과 음성으로 변환해 차량에서 복습할 수 있게 하는 현대차 공모전 프로젝트다. 현재 API는 PDF 텍스트 추출과 설명 대본 기반 한국어 MP3 생성·조회를 제공한다.
 
 **기술 스택** · Java 21, Spring Boot 3.5, Gradle, PostgreSQL, Spring Data JPA, PDFBox 3, Swagger/OpenAPI, JUnit 5
 
@@ -57,3 +57,7 @@ Web Adapter → port.in → Modify / Query Service → port.out ← Outbound Ada
 1. 구현 전에 기존 코드와 Git 상태를 읽고, 해당 행위가 들어갈 도메인·서비스·포트를 확인한다.
 2. 같은 책임을 가진 코드가 있으면 그 구조에 붙인다. 새 클래스나 포트는 기존 책임으로 표현할 수 없거나 경계를 분리할 이유가 있을 때 추가한다.
 3. 동작과 API 계약을 테스트하고 변경 파일, 검증 결과, 확인하지 못한 범위를 보고한다. 요청된 작업 단위로 스테이징하고, 커밋과 푸시는 사용자 지시에 따른다.
+
+## 7. 학습 음성 API 실행과 검증
+
+Google TTS 설정, 생성·조회 API, 오류 코드와 수동 재생 확인 절차는 [학습 음성 API 가이드](docs/google-tts-audio.md)를 참고한다.
