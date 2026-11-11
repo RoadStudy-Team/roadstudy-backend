@@ -8,6 +8,9 @@ import java.util.Arrays;
 
 import com.roadstudy.adapter.pdf.PdfBoxDocumentReader;
 import com.roadstudy.application.study.StudyModifyService;
+import com.roadstudy.application.study.port.in.FindStudyAudio;
+import com.roadstudy.application.study.port.out.AudioStorage;
+import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.global.exception.GlobalExceptionHandler;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -27,6 +30,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -38,8 +42,10 @@ class StudyControllerTests {
     private static final String ENDPOINT = "/api/studies/extract-text";
     private static final int MAX_FILE_BYTES = 50 * 1024 * 1024;
 
+    private final StudyModifyService service = new StudyModifyService(new PdfBoxDocumentReader(),
+            mock(SpeechSynthesizer.class), mock(AudioStorage.class));
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(
-                    new StudyController(new StudyModifyService(new PdfBoxDocumentReader())))
+                    new StudyController(service, service, mock(FindStudyAudio.class)))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
 
