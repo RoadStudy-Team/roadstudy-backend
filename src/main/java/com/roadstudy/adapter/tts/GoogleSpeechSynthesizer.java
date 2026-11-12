@@ -1,5 +1,8 @@
 package com.roadstudy.adapter.tts;
 
+import java.io.ByteArrayOutputStream;
+import java.util.List;
+
 import com.google.api.gax.rpc.ApiException;
 import com.google.api.gax.rpc.StatusCode;
 import com.google.cloud.texttospeech.v1.AudioConfig;
@@ -48,6 +51,20 @@ public class GoogleSpeechSynthesizer implements SpeechSynthesizer {
 
     @Override
     public byte[] synthesize(String script) {
+        List<String> chunks = TtsScriptChunks.split(script);
+        if (chunks.size() == 1) {
+            return synthesizeChunk(chunks.getFirst()).toByteArray();
+        }
+
+        ByteArrayOutputStream audio = new ByteArrayOutputStream();
+        for (String chunk : chunks) {
+            audio.writeBytes(synthesizeChunk(chunk).toByteArray());
+        }
+
+        return audio.toByteArray();
+    }
+
+    private ByteString synthesizeChunk(String script) {
         var request = SynthesizeSpeechRequest.newBuilder()
                 .setInput(SynthesisInput.newBuilder().setText(script))
                 .setVoice(voice)
@@ -75,6 +92,7 @@ public class GoogleSpeechSynthesizer implements SpeechSynthesizer {
         if (audio.isEmpty()) {
             throw StudyAudioException.generationFailed();
         }
-        return audio.toByteArray();
+
+        return audio;
     }
 }
