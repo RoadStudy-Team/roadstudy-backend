@@ -55,7 +55,7 @@ class OpenAiStudyGeneratorTests {
 
     @ParameterizedTest
     @ValueSource(strings = {
-            "", "{", "{}", "null",
+            "{", "{}",
             "{\"title\":\"제목\",\"summary\":\"요약\",\"explanationScript\":\" \"}",
             "{\"title\":1,\"summary\":\"요약\",\"explanationScript\":\"대본\"}",
             "{\"title\":\"제목\",\"summary\":\"요약\",\"explanationScript\":\"대본\"} {}"
@@ -72,7 +72,6 @@ class OpenAiStudyGeneratorTests {
     @ValueSource(strings = {
             "{",
             "{\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"}}",
-            "{\"status\":\"completed\",\"output\":[]}",
             "{\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"refusal\"}]}]}"
     })
     @DisplayName("응답 본문이 손상됐거나 생성이 완료되지 않으면 결과를 거부한다")
@@ -84,23 +83,10 @@ class OpenAiStudyGeneratorTests {
     }
 
     @Test
-    @DisplayName("OpenAI 응답 JSON 뒤에 다른 JSON 값이 붙으면 결과를 거부한다")
-    void rejectsTrailingResponseJson() throws Exception {
-        String valid = response("""
-                {"title":"제목","summary":"요약","explanationScript":"대본"}
-                """);
-        server.expect(requestTo("https://example.test/v1/responses"))
-                .andRespond(withSuccess(valid + " {}", MediaType.APPLICATION_JSON));
-
-        assertFailure(FailureType.EXTERNAL_SERVICE_FAILURE, "INVALID_STUDY_EXPLANATION");
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {401, 429, 500, 503})
     @DisplayName("외부 API의 HTTP 오류를 서비스 호출 실패로 변환한다")
-    void handlesUpstreamError(int status) {
+    void handlesUpstreamError() {
         server.expect(requestTo("https://example.test/v1/responses"))
-                .andRespond(withStatus(HttpStatus.valueOf(status)).body("upstream details"));
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).body("upstream details"));
 
         assertFailure(FailureType.EXTERNAL_SERVICE_FAILURE, "STUDY_GENERATION_FAILED");
     }

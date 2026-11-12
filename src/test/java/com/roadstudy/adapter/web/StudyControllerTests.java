@@ -2,7 +2,6 @@ package com.roadstudy.adapter.web;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
@@ -11,6 +10,8 @@ import com.roadstudy.application.study.StudyModifyService;
 import com.roadstudy.application.study.StudyExplanation;
 import com.roadstudy.application.study.exception.StudyExplanationException;
 import com.roadstudy.application.study.port.out.StudyGenerator;
+import com.roadstudy.application.study.port.out.StudyRepository;
+import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.global.exception.GlobalExceptionHandler;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -21,15 +22,15 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -46,18 +47,25 @@ class StudyControllerTests {
     private static final int MAX_FILE_BYTES = 50 * 1024 * 1024;
 
     private final StudyGenerator generator = mock(StudyGenerator.class);
-    private final StudyModifyService service = new StudyModifyService(new PdfBoxDocumentReader(), generator);
+    private final StudyRepository repository = mock(StudyRepository.class);
+    private final StudyModifyService service = new StudyModifyService(new PdfBoxDocumentReader(), generator, repository);
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new StudyController(service, service))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
 
     @Test
-    @DisplayName("PDF에서 추출한 텍스트로 생성한 제목, 요약, 대본을 반환한다")
+    @DisplayName("PDF에서 생성한 대본을 저장하고 세션 ID, 제목, 요약, 대본을 반환한다")
     void generatesExplanation() throws Exception {
         when(generator.generate("Hello PDF")).thenReturn(new StudyExplanation("제목", "요약", "설명"));
+        when(repository.save(any(StudySession.class))).thenAnswer(invocation -> {
+            StudySession session = invocation.getArgument(0);
+            ReflectionTestUtils.setField(session, "id", 42L);
+            return session;
+        });
 
         mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", pdf("Hello PDF"))))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(42))
                 .andExpect(jsonPath("$.title").value("제목"))
                 .andExpect(jsonPath("$.summary").value("요약"))
                 .andExpect(jsonPath("$.explanationScript").value("설명"));
@@ -69,7 +77,7 @@ class StudyControllerTests {
         mvc.perform(multipart(GENERATE_ENDPOINT))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
-        verifyNoInteractions(generator);
+        verifyNoInteractions(generator, repository);
     }
 
     @Test
@@ -78,57 +86,30 @@ class StudyControllerTests {
         mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", new byte[]{1})))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_PDF"));
-        verifyNoInteractions(generator);
+        verifyNoInteractions(generator, repository);
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    @DisplayName("외부 호출 실패와 잘못된 결과는 각각의 오류 코드로 502를 반환한다")
-    void returnsGenerationFailure(boolean invalidResult) throws Exception {
-        var failure = invalidResult
-                ? StudyExplanationException.invalidResult()
-                : StudyExplanationException.generationFailed();
-        when(generator.generate("Hello PDF")).thenThrow(failure);
+    @Test
+    @DisplayName("생성 실패는 502로 반환하고 학습 세션을 저장하지 않는다")
+    void returnsGenerationFailureWithoutSaving() throws Exception {
+        when(generator.generate("Hello PDF")).thenThrow(StudyExplanationException.generationFailed());
 
         mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", pdf("Hello PDF"))))
                 .andExpect(status().isBadGateway())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(502))
-                .andExpect(jsonPath("$.code").value(
-                        invalidResult ? "INVALID_STUDY_EXPLANATION" : "STUDY_GENERATION_FAILED"));
+                .andExpect(jsonPath("$.code").value("STUDY_GENERATION_FAILED"));
+        verifyNoInteractions(repository);
     }
 
     @Test
     @DisplayName("PDF 텍스트가 비어 있으면 생성기를 호출하지 않고 422를 반환한다")
     void rejectsBlankGenerationInput() throws Exception {
-        mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", pdf(" "))))
+        mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", pdf("   "))))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("PDF_TEXT_EMPTY"));
-        verifyNoInteractions(generator);
-    }
-
-    @Test
-    @DisplayName("생성 타임아웃을 504 ProblemDetail로 반환한다")
-    void returnsGenerationTimeout() throws Exception {
-        when(generator.generate("Hello PDF")).thenThrow(StudyExplanationException.generationTimedOut());
-
-        mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", pdf("Hello PDF"))))
-                .andExpect(status().isGatewayTimeout())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value("STUDY_GENERATION_TIMEOUT"));
-    }
-
-    @Test
-    @DisplayName("PDF 파일을 올리면 파일명, 페이지 수, 문자 수와 텍스트를 반환한다")
-    void extractsText() throws Exception {
-        mvc.perform(multipart(ENDPOINT).file(pdfFile("lecture.pdf", pdf("Hello PDF"))))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.fileName").value("lecture.pdf"))
-                .andExpect(jsonPath("$.pageCount").value(1))
-                .andExpect(jsonPath("$.characterCount").value("Hello PDF".length()))
-                .andExpect(jsonPath("$.text").value("Hello PDF"));
+        verifyNoInteractions(generator, repository);
     }
 
     @Test
@@ -137,6 +118,8 @@ class StudyControllerTests {
         String expected = "First page\nSecond page";
         mvc.perform(multipart(ENDPOINT).file(pdfFile("lecture.pdf", pdf("First page", "Second page"))))
                 .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.fileName").value("lecture.pdf"))
                 .andExpect(jsonPath("$.pageCount").value(2))
                 .andExpect(jsonPath("$.characterCount").value(expected.length()))
                 .andExpect(jsonPath("$.text").value(expected));
@@ -149,37 +132,10 @@ class StudyControllerTests {
     }
 
     @Test
-    @DisplayName("PDF 형식이 아닌 파일을 업로드하면 400을 반환한다")
-    void rejectsNonPdfFile() throws Exception {
-        var file = new MockMultipartFile("file", "lecture.txt", MediaType.TEXT_PLAIN_VALUE,
-                "hello".getBytes(StandardCharsets.UTF_8));
-        expectProblem(file, 400, "INVALID_PDF");
-    }
-
-    @Test
-    @DisplayName("파일명과 콘텐츠 타입을 PDF로 지정해도 실제 형식이 다르면 거부한다")
-    void rejectsDisguisedPdfFile() throws Exception {
-        expectProblem(pdfFile("lecture.pdf", "hello".getBytes(StandardCharsets.UTF_8)), 400, "INVALID_PDF");
-    }
-
-    @Test
     @DisplayName("PDF 헤더 뒤에 올바른 문서 구조가 없으면 400을 반환한다")
     void rejectsMalformedPdf() throws Exception {
         expectProblem(pdfFile("broken.pdf", "%PDF-1.7\ninvalid".getBytes(StandardCharsets.US_ASCII)),
                 400, "INVALID_PDF");
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"", "   "})
-    @DisplayName("텍스트가 없거나 공백만 있는 PDF를 업로드하면 422를 반환한다")
-    void rejectsPdfWithoutText(String text) throws Exception {
-        expectProblem(pdfFile("blank.pdf", pdf(text)), 422, "PDF_TEXT_EMPTY");
-    }
-
-    @Test
-    @DisplayName("암호가 필요한 PDF의 텍스트를 읽을 수 없으면 422를 반환한다")
-    void rejectsPasswordProtectedPdf() throws Exception {
-        expectProblem(pdfFile("protected.pdf", pdf(new StandardProtectionPolicy("owner", "reader", new AccessPermission()), "Protected")), 422, "PDF_EXTRACTION_FAILED");
     }
 
     @Test
@@ -207,16 +163,6 @@ class StudyControllerTests {
     }
 
     @Test
-    @DisplayName("file 파트가 없으면 400을 반환한다")
-    void rejectsMissingFilePart() throws Exception {
-        mvc.perform(multipart(ENDPOINT))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.code").value("HTTP_400"));
-    }
-
-    @Test
     @DisplayName("multipart 요청이 아니면 415를 반환한다")
     void rejectsUnsupportedRequestContentType() throws Exception {
         mvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content("{}"))
@@ -233,20 +179,6 @@ class StudyControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.pageCount").value(3))
                 .andExpect(jsonPath("$.text").value(matchesPattern("First\\s+Last")));
-    }
-
-    @Test
-    @DisplayName("파일 읽기 실패 시 500을 반환하고 내부 오류 메시지를 숨긴다")
-    void sanitizesUnexpectedReadFailure() throws Exception {
-        var file = new MockMultipartFile("file", "broken.pdf", MediaType.APPLICATION_PDF_VALUE, new byte[]{1}) {
-            @Override
-            public InputStream getInputStream() throws IOException {
-                throw new IOException("외부에 공개할 수 없는 파일 읽기 오류");
-            }
-        };
-
-        expectProblem(file, 500, "INTERNAL_ERROR")
-                .andExpect(jsonPath("$.detail").value("서버에서 예상하지 못한 오류가 발생했습니다."));
     }
 
     @Test

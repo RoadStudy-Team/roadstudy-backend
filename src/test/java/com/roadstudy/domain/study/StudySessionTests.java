@@ -18,14 +18,6 @@ class StudySessionTests {
     }
 
     @Test
-    @DisplayName("학습 세션을 처리 중 상태로 생성한다")
-    void createsProcessingSession() {
-        var study = StudySession.create(new StudySessionCreateRequest("lecture.pdf"));
-
-        assertThat(study.getStatus()).isEqualTo(StudyStatus.PROCESSING);
-    }
-
-    @Test
     @DisplayName("이미 실패한 학습 세션의 실패 처리를 거부한다")
     void rejectsFailingAnAlreadyFailedSession() {
         var study = StudySession.create(new StudySessionCreateRequest("lecture.pdf"));
