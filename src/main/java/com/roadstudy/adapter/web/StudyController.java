@@ -7,6 +7,7 @@ import com.roadstudy.adapter.web.response.ExtractTextResponse;
 import com.roadstudy.adapter.web.response.StudyExplanationResponse;
 import com.roadstudy.application.study.port.in.ExtractStudyText;
 import com.roadstudy.application.study.port.in.GenerateStudyExplanation;
+import com.roadstudy.domain.study.StudySession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,8 @@ public class StudyController implements StudyControllerDocs {
     @PostMapping(path = "/generate-explanation", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<StudyExplanationResponse> generateExplanation(@RequestPart("file") MultipartFile file) throws IOException {
         try (var input = file.getInputStream()) {
-            return ResponseEntity.ok(StudyExplanationResponse.from(generateStudyExplanation.generate(input)));
+            StudySession session = generateStudyExplanation.generate(file.getOriginalFilename(), input);
+            return ResponseEntity.ok(StudyExplanationResponse.from(session));
         }
     }
 

@@ -56,6 +56,17 @@ public class StudySession {
         return new StudySession(request.originalFileName());
     }
 
+    public void changeExplanation(String title, String summary, String explanationScript) {
+        requireProcessing();
+        requireText(title, "title");
+        requireText(summary, "summary");
+        requireText(explanationScript, "explanationScript");
+
+        this.title = title;
+        this.summary = summary;
+        this.explanationScript = explanationScript;
+    }
+
     public void fail() {
         requireProcessing();
         this.status = StudyStatus.FAILED;
