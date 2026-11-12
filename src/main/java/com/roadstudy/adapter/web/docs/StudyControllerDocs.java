@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import com.roadstudy.adapter.web.response.ExtractTextResponse;
 import com.roadstudy.adapter.web.response.StudyExplanationResponse;
+import com.roadstudy.adapter.web.response.StudyResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -49,4 +50,32 @@ public interface StudyControllerDocs {
             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                     schema = @Schema(implementation = ProblemDetail.class)))
     ResponseEntity<StudyExplanationResponse> generateExplanation(MultipartFile file) throws IOException;
+
+    @Operation(summary = "학습 자동 생성 시작",
+            description = "최대 50MB의 PDF를 업로드하면 텍스트 추출과 입력 검증을 마친 뒤 바로 응답하고, "
+                    + "대본 생성과 음성 생성은 백그라운드에서 이어서 처리합니다. 진행 상태는 학습 세션 조회로 확인합니다.")
+    @ApiResponse(responseCode = "202", description = "생성 요청 접수. 처리 중인 학습 세션과 조회 주소(Location)를 반환합니다.",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = StudyResponse.class)))
+    @ApiResponse(responseCode = "400", description = "빈 파일 또는 잘못된 PDF",
+            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "413", description = "업로드 용량 초과",
+            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "422", description = "텍스트를 추출할 수 없거나 생성 입력 길이 초과",
+            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class)))
+    ResponseEntity<StudyResponse> startGeneration(MultipartFile file) throws IOException;
+
+    @Operation(summary = "학습 세션 조회",
+            description = "학습 세션의 처리 상태와 결과를 조회합니다. 상태는 PROCESSING, COMPLETED, FAILED 중 하나이며 "
+                    + "COMPLETED일 때 audioUrl로 MP3를 재생할 수 있습니다.")
+    @ApiResponse(responseCode = "200", description = "학습 세션 조회 성공",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = StudyResponse.class)))
+    @ApiResponse(responseCode = "404", description = "학습 세션 없음",
+            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                    schema = @Schema(implementation = ProblemDetail.class)))
+    ResponseEntity<StudyResponse> getStudy(Long studyId);
 }

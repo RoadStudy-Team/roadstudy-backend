@@ -3,7 +3,9 @@ package com.roadstudy.application.study;
 import java.io.ByteArrayInputStream;
 
 import com.roadstudy.application.study.exception.StudyExplanationException;
+import com.roadstudy.application.study.port.out.AudioStorage;
 import com.roadstudy.application.study.port.out.DocumentReader;
+import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.application.study.port.out.StudyGenerator;
 import com.roadstudy.application.study.port.out.StudyRepository;
 import com.roadstudy.domain.study.StudySession;
@@ -27,7 +29,8 @@ class StudyModifyServiceTests {
     private final DocumentReader reader = mock(DocumentReader.class);
     private final StudyGenerator generator = mock(StudyGenerator.class);
     private final StudyRepository repository = mock(StudyRepository.class);
-    private final StudyModifyService service = new StudyModifyService(reader, generator, repository);
+    private final StudyModifyService service = new StudyModifyService(
+            reader, generator, repository, mock(SpeechSynthesizer.class), mock(AudioStorage.class), Runnable::run);
 
     @Test
     @DisplayName("앞뒤 공백을 제외하고 유니코드 문자 6만 자를 허용한다")
