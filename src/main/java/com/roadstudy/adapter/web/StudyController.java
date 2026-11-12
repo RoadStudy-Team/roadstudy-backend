@@ -1,6 +1,7 @@
 package com.roadstudy.adapter.web;
 
 import java.io.IOException;
+import java.net.URI;
 
 import com.roadstudy.adapter.web.docs.StudyAudioApiDocs;
 import com.roadstudy.adapter.web.docs.StudyControllerDocs;
@@ -8,10 +9,13 @@ import com.roadstudy.adapter.web.request.GenerateAudioRequest;
 import com.roadstudy.adapter.web.response.ExtractTextResponse;
 import com.roadstudy.adapter.web.response.StudyAudioResponse;
 import com.roadstudy.adapter.web.response.StudyExplanationResponse;
+import com.roadstudy.adapter.web.response.StudyResponse;
 import com.roadstudy.application.study.port.in.ExtractStudyText;
+import com.roadstudy.application.study.port.in.FindStudy;
 import com.roadstudy.application.study.port.in.FindStudyAudio;
 import com.roadstudy.application.study.port.in.GenerateStudyAudio;
 import com.roadstudy.application.study.port.in.GenerateStudyExplanation;
+import com.roadstudy.application.study.port.in.StartStudyGeneration;
 import com.roadstudy.application.study.StudyAudio;
 import com.roadstudy.domain.study.StudySession;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +47,25 @@ public class StudyController implements StudyControllerDocs, StudyAudioApiDocs {
     private final GenerateStudyExplanation generateStudyExplanation;
     private final GenerateStudyAudio generateStudyAudio;
     private final FindStudyAudio findStudyAudio;
+    private final StartStudyGeneration startStudyGeneration;
+    private final FindStudy findStudy;
+
+    @Override
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<StudyResponse> startGeneration(@RequestPart("file") MultipartFile file) throws IOException {
+        try (var input = file.getInputStream()) {
+            StudySession session = startStudyGeneration.start(file.getOriginalFilename(), input);
+            return ResponseEntity.accepted()
+                    .location(URI.create("/api/studies/" + session.getId()))
+                    .body(StudyResponse.from(session));
+        }
+    }
+
+    @Override
+    @GetMapping("/{studyId}")
+    public ResponseEntity<StudyResponse> getStudy(@PathVariable("studyId") Long studyId) {
+        return ResponseEntity.ok(StudyResponse.from(findStudy.findById(studyId)));
+    }
 
     @Override
     @PostMapping(path = "/generate-explanation", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

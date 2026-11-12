@@ -36,8 +36,9 @@ class StudyAudioTests {
     private final SpeechSynthesizer synthesizer = mock(SpeechSynthesizer.class);
     private final AudioStorage storage = mock(AudioStorage.class);
     private final StudyModifyService modifyService = new StudyModifyService(
-            mock(DocumentReader.class), mock(StudyGenerator.class), mock(StudyRepository.class), synthesizer, storage);
-    private final StudyQueryService queryService = new StudyQueryService(storage);
+            mock(DocumentReader.class), mock(StudyGenerator.class), mock(StudyRepository.class), synthesizer, storage,
+            Runnable::run);
+    private final StudyQueryService queryService = new StudyQueryService(storage, mock(StudyRepository.class));
 
     @Test
     @DisplayName("앞뒤 공백을 뺀 대본을 합성하고 새 ID로 저장한 결과를 반환한다")

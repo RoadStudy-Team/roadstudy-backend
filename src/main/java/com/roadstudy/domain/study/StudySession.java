@@ -67,6 +67,15 @@ public class StudySession {
         this.explanationScript = explanationScript;
     }
 
+    public void complete(String audioPath) {
+        requireProcessing();
+        requireText(explanationScript, "explanationScript");
+        requireText(audioPath, "audioPath");
+
+        this.audioPath = audioPath;
+        this.status = StudyStatus.COMPLETED;
+    }
+
     public void fail() {
         requireProcessing();
         this.status = StudyStatus.FAILED;

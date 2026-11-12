@@ -191,8 +191,11 @@ class StudyAudioApiTests {
 
     private MockMvc mvc(AudioStorage storage) {
         var modifyService = new StudyModifyService(
-                mock(DocumentReader.class), mock(StudyGenerator.class), mock(StudyRepository.class), synthesizer, storage);
-        var controller = new StudyController(modifyService, modifyService, modifyService, new StudyQueryService(storage));
+                mock(DocumentReader.class), mock(StudyGenerator.class), mock(StudyRepository.class), synthesizer, storage,
+                Runnable::run);
+        var queryService = new StudyQueryService(storage, mock(StudyRepository.class));
+        var controller = new StudyController(
+                modifyService, modifyService, modifyService, queryService, modifyService, queryService);
         return MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new GlobalExceptionHandler()).build();
     }
 

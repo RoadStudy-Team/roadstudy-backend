@@ -12,6 +12,7 @@ import com.roadstudy.application.study.StudyQueryService;
 
 import com.roadstudy.adapter.pdf.PdfBoxDocumentReader;
 import com.roadstudy.application.study.exception.StudyExplanationException;
+import com.roadstudy.application.study.port.in.FindStudy;
 import com.roadstudy.application.study.port.in.FindStudyAudio;
 import com.roadstudy.application.study.port.out.AudioStorage;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
@@ -58,8 +59,11 @@ class StudyControllerTests {
 
     private final StudyGenerator generator = mock(StudyGenerator.class);
     private final StudyRepository repository = mock(StudyRepository.class);
-    private final StudyModifyService service = new StudyModifyService(new PdfBoxDocumentReader(), generator, repository, mock(SpeechSynthesizer.class), mock(AudioStorage.class));
-    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new StudyController(service, service, service, mock(FindStudyAudio.class)))
+    private final StudyModifyService service = new StudyModifyService(
+            new PdfBoxDocumentReader(), generator, repository, mock(SpeechSynthesizer.class), mock(AudioStorage.class),
+            Runnable::run);
+    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new StudyController(
+                    service, service, service, mock(FindStudyAudio.class), service, mock(FindStudy.class)))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
 
@@ -218,9 +222,11 @@ class StudyControllerTests {
         var synthesizer = mock(SpeechSynthesizer.class);
         var storage = new LocalAudioStorage(directory.toString());
         var integratedService = new StudyModifyService(
-                new PdfBoxDocumentReader(), generator, repository, synthesizer, storage);
+                new PdfBoxDocumentReader(), generator, repository, synthesizer, storage, Runnable::run);
+        var integratedQueryService = new StudyQueryService(storage, repository);
         var integratedMvc = MockMvcBuilders.standaloneSetup(new StudyController(
-                        integratedService, integratedService, integratedService, new StudyQueryService(storage)))
+                        integratedService, integratedService, integratedService, integratedQueryService,
+                        integratedService, integratedQueryService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
         var mapper = new ObjectMapper();

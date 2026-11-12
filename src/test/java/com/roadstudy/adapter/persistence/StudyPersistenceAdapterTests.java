@@ -1,8 +1,11 @@
 package com.roadstudy.adapter.persistence;
 
 import java.io.ByteArrayInputStream;
+import java.nio.file.Path;
+import java.util.UUID;
 
 import com.roadstudy.application.study.ExtractedStudyText;
+import com.roadstudy.application.study.StudyAudio;
 import com.roadstudy.application.study.port.out.AudioStorage;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.application.study.port.out.StudyRepository;
@@ -19,7 +22,9 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @DataJpaTest
 @Import(StudyPersistenceAdapter.class)
@@ -62,7 +67,7 @@ class StudyPersistenceAdapterTests {
                 content -> new ExtractedStudyText(1, "학습 자료"),
                 text -> new StudyExplanation("학습 제목", "학습 요약", script),
                 studyRepository,
-                mock(SpeechSynthesizer.class), mock(AudioStorage.class));
+                mock(SpeechSynthesizer.class), mock(AudioStorage.class), Runnable::run);
 
         Long id = service.generate("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
         assertThat(id).isNotNull();
@@ -75,5 +80,28 @@ class StudyPersistenceAdapterTests {
         assertThat(session.getSummary()).isEqualTo("학습 요약");
         assertThat(session.getExplanationScript()).isEqualTo(script);
         assertThat(session.getStatus()).isEqualTo(StudyStatus.PROCESSING);
+    }
+
+    @Test
+    @DisplayName("자동 생성이 끝난 학습 세션의 완료 상태와 음성 경로를 저장하고 다시 조회한다")
+    void savesAndReloadsCompletedGeneration() throws Exception {
+        Path audioPath = Path.of("storage", "audio", "lecture.mp3");
+        var storage = mock(AudioStorage.class);
+        when(storage.save(any(UUID.class), any(byte[].class)))
+                .thenAnswer(call -> new StudyAudio(call.getArgument(0), audioPath));
+        var service = new StudyModifyService(
+                content -> new ExtractedStudyText(1, "학습 자료"),
+                text -> new StudyExplanation("학습 제목", "학습 요약", "학습 대본"),
+                studyRepository,
+                script -> new byte[]{1}, storage, Runnable::run);
+
+        Long id = service.start("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
+        entityManager.flush();
+        entityManager.clear();
+
+        StudySession session = studyRepository.findById(id).orElseThrow();
+        assertThat(session.getStatus()).isEqualTo(StudyStatus.COMPLETED);
+        assertThat(session.getExplanationScript()).isEqualTo("학습 대본");
+        assertThat(session.getAudioPath()).isEqualTo(audioPath.toString());
     }
 }
