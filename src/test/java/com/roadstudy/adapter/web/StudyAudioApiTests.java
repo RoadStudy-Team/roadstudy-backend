@@ -103,9 +103,9 @@ class StudyAudioApiTests {
     }
 
     @Test
-    @DisplayName("대본이 5,000바이트를 넘으면 422를 반환하고 합성기를 호출하지 않는다")
+    @DisplayName("대본이 30,000바이트를 넘으면 422를 반환하고 합성기를 호출하지 않는다")
     void rejectsTooLongScript() throws Exception {
-        expectProblem(generate("가".repeat(1_667)), 422, "TTS_INPUT_TOO_LONG");
+        expectProblem(generate("가".repeat(10_001)), 422, "TTS_INPUT_TOO_LONG");
         verifyNoInteractions(synthesizer);
     }
 

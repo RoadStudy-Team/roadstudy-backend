@@ -118,7 +118,7 @@ class StudyGenerationTests {
     @DisplayName("대본이 음성 합성 제한을 넘으면 생성된 대본은 남기고 세션을 실패 처리한다")
     void failsSessionWhenScriptExceedsSpeechLimit() throws Exception {
         // 한글 1,667자는 5,001바이트로 음성 합성 제한을 1바이트 넘는다.
-        String script = "가".repeat(1_667);
+        String script = "가".repeat(10_001);
         when(generator.generate(TEXT)).thenReturn(new StudyExplanation("제목", "요약", script));
         Long id = start().getId();
 
