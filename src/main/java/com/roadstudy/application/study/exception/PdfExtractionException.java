@@ -8,8 +8,12 @@ public class PdfExtractionException extends ApplicationException {
         super(code, message, type, cause);
     }
 
+    private PdfExtractionException(String code, String message, FailureType type) {
+        super(code, message, type);
+    }
+
     public static PdfExtractionException emptyFile() {
-        return new PdfExtractionException("EMPTY_FILE", "업로드한 파일이 비어 있습니다.", FailureType.INVALID_INPUT, null);
+        return new PdfExtractionException("EMPTY_FILE", "업로드한 파일이 비어 있습니다.", FailureType.INVALID_INPUT);
     }
 
     public static PdfExtractionException invalidPdf(Throwable cause) {
@@ -18,12 +22,12 @@ public class PdfExtractionException extends ApplicationException {
 
     public static PdfExtractionException fileTooLarge() {
         return new PdfExtractionException("FILE_TOO_LARGE", "PDF 파일은 최대 50MB까지 업로드할 수 있습니다.",
-                FailureType.PAYLOAD_TOO_LARGE, null);
+                FailureType.PAYLOAD_TOO_LARGE);
     }
 
     public static PdfExtractionException emptyText() {
         return new PdfExtractionException("PDF_TEXT_EMPTY", "PDF에서 추출할 수 있는 텍스트가 없습니다.",
-                FailureType.UNPROCESSABLE_CONTENT, null);
+                FailureType.UNPROCESSABLE_CONTENT);
     }
 
     public static PdfExtractionException extractionFailed(Throwable cause) {
