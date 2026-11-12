@@ -4,13 +4,21 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.nio.file.Path;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.roadstudy.adapter.storage.LocalAudioStorage;
+import com.roadstudy.application.study.StudyQueryService;
 
 import com.roadstudy.adapter.pdf.PdfBoxDocumentReader;
-import com.roadstudy.application.study.StudyModifyService;
-import com.roadstudy.application.study.StudyExplanation;
 import com.roadstudy.application.study.exception.StudyExplanationException;
+import com.roadstudy.application.study.port.in.FindStudyAudio;
+import com.roadstudy.application.study.port.out.AudioStorage;
+import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.application.study.port.out.StudyGenerator;
 import com.roadstudy.application.study.port.out.StudyRepository;
+import com.roadstudy.application.study.StudyExplanation;
+import com.roadstudy.application.study.StudyModifyService;
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.global.exception.GlobalExceptionHandler;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -22,6 +30,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -34,6 +43,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -48,8 +58,8 @@ class StudyControllerTests {
 
     private final StudyGenerator generator = mock(StudyGenerator.class);
     private final StudyRepository repository = mock(StudyRepository.class);
-    private final StudyModifyService service = new StudyModifyService(new PdfBoxDocumentReader(), generator, repository);
-    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new StudyController(service, service))
+    private final StudyModifyService service = new StudyModifyService(new PdfBoxDocumentReader(), generator, repository, mock(SpeechSynthesizer.class), mock(AudioStorage.class));
+    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new StudyController(service, service, service, mock(FindStudyAudio.class)))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
 
@@ -202,6 +212,44 @@ class StudyControllerTests {
                 .andExpect(jsonPath("$.text").value("Hello PDF"));
     }
 
+    @Test
+    @DisplayName("PDF에서 생성한 대본으로 음성을 생성하고 반환된 URL에서 조회한다")
+    void generatesAudioFromExplanation(@TempDir Path directory) throws Exception {
+        var synthesizer = mock(SpeechSynthesizer.class);
+        var storage = new LocalAudioStorage(directory.toString());
+        var integratedService = new StudyModifyService(
+                new PdfBoxDocumentReader(), generator, repository, synthesizer, storage);
+        var integratedMvc = MockMvcBuilders.standaloneSetup(new StudyController(
+                        integratedService, integratedService, integratedService, new StudyQueryService(storage)))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+        var mapper = new ObjectMapper();
+        byte[] audioBytes = {(byte) 0xFF, (byte) 0xF3, 0x44, (byte) 0xC4};
+        when(generator.generate("Hello PDF")).thenReturn(new StudyExplanation("제목", "요약", "생성된 대본"));
+        when(repository.save(any(StudySession.class))).thenAnswer(invocation -> {
+            StudySession session = invocation.getArgument(0);
+            ReflectionTestUtils.setField(session, "id", 42L);
+            return session;
+        });
+        when(synthesizer.synthesize("생성된 대본")).thenReturn(audioBytes);
+
+        String explanationBody = integratedMvc.perform(multipart(GENERATE_ENDPOINT)
+                        .file(pdfFile("lecture.pdf", pdf("Hello PDF"))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        String script = mapper.readTree(explanationBody).path("explanationScript").asText();
+        String audioBody = integratedMvc.perform(post("/api/studies/generate-audio")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsBytes(java.util.Map.of("explanationScript", script))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String audioUrl = mapper.readTree(audioBody).path("audioUrl").asText();
+
+        integratedMvc.perform(get(audioUrl))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("audio/mpeg"))
+                .andExpect(content().bytes(audioBytes));
+    }
     private ResultActions expectProblem(MockMultipartFile file, int expectedStatus, String expectedCode) throws Exception {
         return mvc.perform(multipart(ENDPOINT).file(file))
                 .andExpect(status().is(expectedStatus))

@@ -33,6 +33,17 @@ class RoadstudyApplicationTests {
                 .andExpect(jsonPath("$.paths['/api/studies/extract-text'].post.requestBody"
                         + ".content['multipart/form-data'].schema.properties.file.format").value("binary"))
                 .andExpect(jsonPath("$.paths['/api/studies/extract-text'].post.responses['422']"
+                        + ".content['application/problem+json']").exists())
+                .andExpect(jsonPath("$.paths['/api/studies/generate-audio'].post.summary").value("학습 음성 생성 (임시)"))
+                .andExpect(jsonPath("$.paths['/api/studies/generate-audio'].post.requestBody"
+                        + ".content['application/json'].schema['$ref']").value("#/components/schemas/GenerateAudioRequest"))
+                .andExpect(jsonPath("$.paths['/api/studies/audio/{audioId}'].get.responses['200']"
+                        + ".content['audio/mpeg'].schema.format").value("binary"))
+                .andExpect(jsonPath("$.paths['/api/studies/audio/{audioId}'].get.responses['404']"
+                        + ".content['application/problem+json']").exists())
+                .andExpect(jsonPath("$.paths['/api/studies/audio/{audioId}'].get.responses['206']"
+                        + ".content['audio/mpeg'].schema.format").value("binary"))
+                .andExpect(jsonPath("$.paths['/api/studies/audio/{audioId}'].get.responses['416']"
                         + ".content['application/problem+json']").exists());
     }
 

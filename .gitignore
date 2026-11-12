@@ -42,3 +42,6 @@ out/
 /secrets/
 *service-account*.json
 *credentials*.json
+
+### Generated audio ###
+/storage/

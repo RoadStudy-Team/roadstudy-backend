@@ -3,9 +3,11 @@ package com.roadstudy.adapter.persistence;
 import java.io.ByteArrayInputStream;
 
 import com.roadstudy.application.study.ExtractedStudyText;
+import com.roadstudy.application.study.port.out.AudioStorage;
+import com.roadstudy.application.study.port.out.SpeechSynthesizer;
+import com.roadstudy.application.study.port.out.StudyRepository;
 import com.roadstudy.application.study.StudyExplanation;
 import com.roadstudy.application.study.StudyModifyService;
-import com.roadstudy.application.study.port.out.StudyRepository;
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.domain.study.StudySessionCreateRequest;
 import com.roadstudy.domain.study.StudyStatus;
@@ -17,6 +19,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 @DataJpaTest
 @Import(StudyPersistenceAdapter.class)
@@ -58,7 +61,8 @@ class StudyPersistenceAdapterTests {
         var service = new StudyModifyService(
                 content -> new ExtractedStudyText(1, "학습 자료"),
                 text -> new StudyExplanation("학습 제목", "학습 요약", script),
-                studyRepository);
+                studyRepository,
+                mock(SpeechSynthesizer.class), mock(AudioStorage.class));
 
         Long id = service.generate("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
         assertThat(id).isNotNull();

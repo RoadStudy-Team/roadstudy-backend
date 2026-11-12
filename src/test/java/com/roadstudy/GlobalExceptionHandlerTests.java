@@ -33,7 +33,8 @@ class GlobalExceptionHandlerTests {
     @ParameterizedTest
     @CsvSource({
         "INVALID_INPUT,400", "NOT_FOUND,404", "CONFLICT,409", "PAYLOAD_TOO_LARGE,413",
-        "UNPROCESSABLE_CONTENT,422", "EXTERNAL_SERVICE_FAILURE,502", "EXTERNAL_SERVICE_TIMEOUT,504"
+        "UNPROCESSABLE_CONTENT,422", "EXTERNAL_SERVICE_FAILURE,502", "EXTERNAL_SERVICE_TIMEOUT,504",
+        "INTERNAL_FAILURE,500"
     })
     @DisplayName("실패 유형에 해당하는 HTTP 상태와 오류 코드를 반환한다")
     void mapsApplicationErrors(FailureType type, int statusCode) throws Exception {
