@@ -1,5 +1,10 @@
 package com.roadstudy.adapter.persistence;
 
+import java.io.ByteArrayInputStream;
+
+import com.roadstudy.application.study.ExtractedStudyText;
+import com.roadstudy.application.study.StudyExplanation;
+import com.roadstudy.application.study.StudyModifyService;
 import com.roadstudy.application.study.port.out.StudyRepository;
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.domain.study.StudySessionCreateRequest;
@@ -44,5 +49,27 @@ class StudyPersistenceAdapterTests {
         assertThat(failed.getStatus()).isEqualTo(StudyStatus.FAILED);
         assertThat(failed.getOriginalFileName()).isEqualTo("lecture.pdf");
         assertThat(failed.getCreatedAt()).isEqualTo(createdAt);
+    }
+
+    @Test
+    @DisplayName("생성한 학습 대본을 저장하고 세션 ID로 다시 조회한다")
+    void savesAndReloadsGeneratedExplanation() throws Exception {
+        String script = "한국어 학습 대본입니다. ".repeat(400);
+        var service = new StudyModifyService(
+                content -> new ExtractedStudyText(1, "학습 자료"),
+                text -> new StudyExplanation("학습 제목", "학습 요약", script),
+                studyRepository);
+
+        Long id = service.generate("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
+        assertThat(id).isNotNull();
+        entityManager.flush();
+        entityManager.clear();
+
+        StudySession session = studyRepository.findById(id).orElseThrow();
+        assertThat(session.getOriginalFileName()).isEqualTo("lecture.pdf");
+        assertThat(session.getTitle()).isEqualTo("학습 제목");
+        assertThat(session.getSummary()).isEqualTo("학습 요약");
+        assertThat(session.getExplanationScript()).isEqualTo(script);
+        assertThat(session.getStatus()).isEqualTo(StudyStatus.PROCESSING);
     }
 }

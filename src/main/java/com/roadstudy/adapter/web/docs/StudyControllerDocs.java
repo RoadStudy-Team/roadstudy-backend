@@ -30,7 +30,7 @@ public interface StudyControllerDocs {
     ResponseEntity<ExtractTextResponse> extractText(MultipartFile file) throws IOException;
 
     @Operation(summary = "학습 설명 대본 생성", description = "최대 50MB의 PDF에서 약 5분 분량의 한국어 학습 설명 대본을 생성합니다.")
-    @ApiResponse(responseCode = "200", description = "대본 생성 성공",
+    @ApiResponse(responseCode = "200", description = "대본 생성 및 저장 성공. 학습 세션 ID를 반환합니다.",
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                     schema = @Schema(implementation = StudyExplanationResponse.class)))
     @ApiResponse(responseCode = "400", description = "빈 파일 또는 잘못된 PDF",

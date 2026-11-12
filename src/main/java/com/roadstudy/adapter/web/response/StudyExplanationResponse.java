@@ -1,10 +1,10 @@
 package com.roadstudy.adapter.web.response;
 
-import com.roadstudy.application.study.StudyExplanation;
+import com.roadstudy.domain.study.StudySession;
 
-public record StudyExplanationResponse(String title, String summary, String explanationScript) {
+public record StudyExplanationResponse(Long id, String title, String summary, String explanationScript) {
 
-    public static StudyExplanationResponse from(StudyExplanation explanation) {
-        return new StudyExplanationResponse(explanation.title(), explanation.summary(), explanation.explanationScript());
+    public static StudyExplanationResponse from(StudySession session) {
+        return new StudyExplanationResponse(session.getId(), session.getTitle(), session.getSummary(), session.getExplanationScript());
     }
 }

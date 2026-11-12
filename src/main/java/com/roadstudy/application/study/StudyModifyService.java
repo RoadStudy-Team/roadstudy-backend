@@ -9,6 +9,9 @@ import com.roadstudy.application.study.port.in.ExtractStudyText;
 import com.roadstudy.application.study.port.in.GenerateStudyExplanation;
 import com.roadstudy.application.study.port.out.DocumentReader;
 import com.roadstudy.application.study.port.out.StudyGenerator;
+import com.roadstudy.application.study.port.out.StudyRepository;
+import com.roadstudy.domain.study.StudySession;
+import com.roadstudy.domain.study.StudySessionCreateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,15 +23,19 @@ public class StudyModifyService implements ExtractStudyText, GenerateStudyExplan
 
     private final DocumentReader documentReader;
     private final StudyGenerator studyGenerator;
+    private final StudyRepository studyRepository;
 
     @Override
-    public StudyExplanation generate(InputStream input) throws IOException {
+    public StudySession generate(String originalFileName, InputStream input) throws IOException {
         String text = extract(input).text();
         if (text.codePointCount(0, text.length()) > MAX_GENERATION_CHARACTERS) {
             throw StudyExplanationException.textTooLong(MAX_GENERATION_CHARACTERS);
         }
 
-        return studyGenerator.generate(text);
+        StudySession session = StudySession.create(new StudySessionCreateRequest(originalFileName));
+        StudyExplanation explanation = studyGenerator.generate(text);
+        session.changeExplanation(explanation.title(), explanation.summary(), explanation.explanationScript());
+        return studyRepository.save(session);
     }
 
     @Override
