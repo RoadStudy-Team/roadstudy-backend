@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 
 public interface StudyAudioApiDocs {
     @Operation(summary = "학습 음성 생성 (임시)",
-            description = "설명 대본을 한국어 MP3로 변환해 저장합니다. 대본은 UTF-8 기준 5,000바이트(한글 약 1,600자)까지 허용합니다.")
+            description = "UTF-8 기준 최대 30,000바이트의 설명 대본을 한국어 MP3로 변환해 저장합니다.")
     @ApiResponse(responseCode = "200", description = "음성 생성 성공",
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                     schema = @Schema(implementation = StudyAudioResponse.class)))

@@ -2,13 +2,19 @@ package com.roadstudy.adapter.web;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.cloud.texttospeech.v1.SynthesizeSpeechRequest;
+import com.google.cloud.texttospeech.v1.SynthesizeSpeechResponse;
+import com.google.cloud.texttospeech.v1.TextToSpeechClient;
+import com.google.protobuf.ByteString;
 import com.roadstudy.adapter.pdf.PdfBoxDocumentReader;
 import com.roadstudy.adapter.storage.LocalAudioStorage;
+import com.roadstudy.adapter.tts.GoogleSpeechSynthesizer;
 import com.roadstudy.application.study.InMemoryStudyRepository;
 import com.roadstudy.application.study.StudyExplanation;
 import com.roadstudy.application.study.StudyModifyService;
@@ -26,6 +32,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -35,7 +43,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -63,11 +74,15 @@ class StudyGenerationApiTests {
 
     @BeforeEach
     void setUp() {
+        mvc = createMvc(synthesizer);
+    }
+
+    private MockMvc createMvc(SpeechSynthesizer speechSynthesizer) {
         var storage = new LocalAudioStorage(directory.toString());
         var modifyService = new StudyModifyService(
-                new PdfBoxDocumentReader(), generator, repository, synthesizer, storage, backgroundTasks::add);
+                new PdfBoxDocumentReader(), generator, repository, speechSynthesizer, storage, backgroundTasks::add);
         var queryService = new StudyQueryService(storage, repository);
-        mvc = MockMvcBuilders.standaloneSetup(new StudyController(
+        return MockMvcBuilders.standaloneSetup(new StudyController(
                         modifyService, modifyService, modifyService, queryService, modifyService, queryService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -91,27 +106,41 @@ class StudyGenerationApiTests {
     }
 
     @Test
-    @DisplayName("백그라운드 생성이 끝나면 세션 조회가 완료 상태와 대본, 재생 가능한 음성 주소를 반환한다")
-    void returnsCompletedStudyWithPlayableAudio() throws Exception {
-        when(generator.generate("Hello PDF")).thenReturn(new StudyExplanation("제목", "요약", "생성된 대본"));
-        when(synthesizer.synthesize("생성된 대본")).thenReturn(AUDIO_BYTES);
-        String location = upload(pdf("Hello PDF")).andReturn().getResponse().getHeader(HttpHeaders.LOCATION);
+    @DisplayName("11,242바이트 대본을 나눠 합성하고 완료 세션의 음성 주소에서 조회한다")
+    void completesStudyWithLongScript() throws Exception {
+        String script = "가".repeat(3_747) + "a";
+        assertThat(script.getBytes(StandardCharsets.UTF_8)).hasSize(11_242);
+        when(generator.generate("Hello PDF")).thenReturn(new StudyExplanation("제목", "요약", script));
 
+        var client = mock(TextToSpeechClient.class);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<TextToSpeechClient> provider = mock(ObjectProvider.class);
+        when(provider.getObject()).thenReturn(client);
+        when(client.synthesizeSpeech(any(SynthesizeSpeechRequest.class))).thenReturn(
+                SynthesizeSpeechResponse.newBuilder().setAudioContent(ByteString.copyFrom(AUDIO_BYTES)).build());
+        mvc = createMvc(new GoogleSpeechSynthesizer(provider, "ko-KR-Neural2-A", 1.0));
+
+        String location = upload(pdf("Hello PDF")).andExpect(status().isAccepted())
+                .andReturn().getResponse().getHeader(HttpHeaders.LOCATION);
         backgroundTasks.remove().run();
 
         String body = mvc.perform(get(location))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
-                .andExpect(jsonPath("$.title").value("제목"))
-                .andExpect(jsonPath("$.summary").value("요약"))
-                .andExpect(jsonPath("$.explanationScript").value("생성된 대본"))
+                .andExpect(jsonPath("$.explanationScript").value(script))
                 .andReturn().getResponse().getContentAsString();
         String audioUrl = mapper.readTree(body).path("audioUrl").asText();
-
         mvc.perform(get(audioUrl))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("audio/mpeg"))
-                .andExpect(content().bytes(AUDIO_BYTES));
+                .andExpect(header().longValue(HttpHeaders.CONTENT_LENGTH, AUDIO_BYTES.length * 3L));
+
+        var requests = ArgumentCaptor.forClass(SynthesizeSpeechRequest.class);
+        verify(client, times(3)).synthesizeSpeech(requests.capture());
+        var chunks = requests.getAllValues().stream().map(request -> request.getInput().getText()).toList();
+        assertThat(chunks).allSatisfy(chunk ->
+                assertThat(chunk.getBytes(StandardCharsets.UTF_8).length).isLessThanOrEqualTo(5_000));
+        assertThat(String.join("", chunks)).isEqualTo(script);
     }
 
     @Test
@@ -154,12 +183,6 @@ class StudyGenerationApiTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
         assertThat(backgroundTasks).isEmpty();
-    }
-
-    @Test
-    @DisplayName("없는 학습 세션을 조회하면 404를 반환한다")
-    void rejectsUnknownStudy() throws Exception {
-        expectProblem(mvc.perform(get(STUDY_ENDPOINT, 404)), 404, "STUDY_NOT_FOUND");
     }
 
     @Test

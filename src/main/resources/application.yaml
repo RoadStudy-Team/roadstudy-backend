@@ -11,6 +11,8 @@ spring:
     password: ${DB_PASSWORD}
   jpa:
     open-in-view: false
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:none}
   servlet:
     multipart:
       max-file-size: 50MB

@@ -35,6 +35,7 @@ public class LocalAudioStorage implements AudioStorage {
             temp = Files.createTempFile(directory, audioId + "-", ".tmp");
             Files.write(temp, content);
             Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE);
+
             return new StudyAudio(audioId, target);
         } catch (IOException ex) {
             deleteQuietly(temp);

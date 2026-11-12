@@ -30,8 +30,7 @@ import static org.mockito.Mockito.when;
 @DisplayName("학습 음성 생성과 조회")
 class StudyAudioTests {
     private static final byte[] AUDIO_BYTES = {(byte) 0xFF, (byte) 0xF3, 0x44, (byte) 0xC4};
-    // 한글 1,666자(4,998바이트)에 ASCII 2자를 더해 정확히 5,000바이트를 만든다.
-    private static final String SCRIPT_AT_LIMIT = "가".repeat(1_666) + "ab";
+    private static final String SCRIPT_AT_LIMIT = "가".repeat(10_000);
 
     private final SpeechSynthesizer synthesizer = mock(SpeechSynthesizer.class);
     private final AudioStorage storage = mock(AudioStorage.class);
@@ -64,9 +63,9 @@ class StudyAudioTests {
     }
 
     @Test
-    @DisplayName("UTF-8 기준 정확히 5,000바이트인 대본을 허용한다")
+    @DisplayName("UTF-8 기준 정확히 30,000바이트인 대본을 허용한다")
     void acceptsScriptAtByteLimit() {
-        assertThat(SCRIPT_AT_LIMIT.getBytes(StandardCharsets.UTF_8)).hasSize(5_000);
+        assertThat(SCRIPT_AT_LIMIT.getBytes(StandardCharsets.UTF_8)).hasSize(30_000);
         when(synthesizer.synthesize(SCRIPT_AT_LIMIT)).thenReturn(AUDIO_BYTES);
         when(storage.save(any(UUID.class), eq(AUDIO_BYTES)))
                 .thenAnswer(call -> new StudyAudio(call.getArgument(0), Path.of("audio.mp3")));
@@ -75,18 +74,11 @@ class StudyAudioTests {
     }
 
     @Test
-    @DisplayName("5,000바이트보다 1바이트 길면 합성기 호출 전에 거부한다")
+    @DisplayName("30,000바이트보다 1바이트 길면 합성기 호출 전에 거부한다")
     void rejectsScriptOverByteLimit() {
         assertFailure(() -> modifyService.generate(SCRIPT_AT_LIMIT + "c"),
                 FailureType.UNPROCESSABLE_CONTENT, "TTS_INPUT_TOO_LONG");
         verifyNoInteractions(synthesizer, storage);
-    }
-
-    @Test
-    @DisplayName("글자 수가 아니라 바이트로 판단하므로 한글 1,667자는 거부한다")
-    void countsBytesNotCharacters() {
-        assertFailure(() -> modifyService.generate("가".repeat(1_667)),
-                FailureType.UNPROCESSABLE_CONTENT, "TTS_INPUT_TOO_LONG");
     }
 
     @Test

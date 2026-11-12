@@ -1,5 +1,7 @@
 package com.roadstudy.adapter.tts;
 
+import java.nio.charset.StandardCharsets;
+
 import com.google.api.gax.rpc.ApiExceptionFactory;
 import com.google.api.gax.rpc.StatusCode;
 import com.google.cloud.texttospeech.v1.AudioEncoding;
@@ -24,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -55,6 +58,47 @@ class GoogleSpeechSynthesizerTests {
         assertThat(request.getValue().getVoice().getName()).isEqualTo("ko-KR-Test-A");
         assertThat(request.getValue().getAudioConfig().getAudioEncoding()).isEqualTo(AudioEncoding.MP3);
         assertThat(request.getValue().getAudioConfig().getSpeakingRate()).isEqualTo(1.25);
+    }
+
+    @Test
+    @DisplayName("긴 대본은 문장 경계에서 나눠 요청하고 음성을 순서대로 연결한다")
+    void synthesizesLongScriptInOrder() {
+        String first = "가".repeat(1_660) + ". ";
+        String second = "다음 문장입니다.";
+        byte[] firstAudio = {1, 2};
+        byte[] secondAudio = {3, 4};
+        when(client.synthesizeSpeech(any(SynthesizeSpeechRequest.class)))
+                .thenReturn(response(firstAudio), response(secondAudio));
+
+        assertThat(synthesizer.synthesize(first + second)).containsExactly(1, 2, 3, 4);
+
+        var requests = ArgumentCaptor.forClass(SynthesizeSpeechRequest.class);
+        verify(client, times(2)).synthesizeSpeech(requests.capture());
+        assertThat(requests.getAllValues()).extracting(request -> request.getInput().getText())
+                .containsExactly(first, second);
+    }
+
+    @Test
+    @DisplayName("문장 하나가 길어도 UTF-8 문자를 자르지 않고 각 요청을 5,000바이트 이하로 제한한다")
+    void splitsOversizedSentenceAtCodePointBoundary() {
+        String script = "가".repeat(1_666) + "😀끝";
+        var chunks = TtsScriptChunks.split(script);
+
+        assertThat(chunks).containsExactly("가".repeat(1_666), "😀끝")
+                .allSatisfy(chunk -> assertThat(chunk.getBytes(StandardCharsets.UTF_8).length).isLessThanOrEqualTo(5_000));
+    }
+
+    @Test
+    @DisplayName("중간 구간 합성이 실패하면 부분 음성 대신 실패를 반환한다")
+    void failsWhenLaterChunkFails() {
+        String script = "가".repeat(2_000);
+        when(client.synthesizeSpeech(any(SynthesizeSpeechRequest.class)))
+                .thenReturn(response(AUDIO_BYTES))
+                .thenThrow(apiException(StatusCode.Code.DEADLINE_EXCEEDED));
+
+        assertThatExceptionOfType(StudyAudioException.class)
+                .isThrownBy(() -> synthesizer.synthesize(script))
+                .satisfies(ex -> assertThat(ex.getCode()).isEqualTo("TTS_TIMEOUT"));
     }
 
     @Test

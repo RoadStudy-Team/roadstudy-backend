@@ -33,8 +33,7 @@ public class StudyModifyService
         implements ExtractStudyText, GenerateStudyExplanation, GenerateStudyAudio, StartStudyGeneration {
     private static final int MAX_FILE_BYTES = 50 * 1024 * 1024;
     private static final int MAX_GENERATION_CHARACTERS = 60_000;
-    // Google TTS 입력 제한은 UTF-8 바이트 기준이다.
-    private static final int MAX_SCRIPT_BYTES = 5_000;
+    private static final int MAX_SCRIPT_BYTES = 30_000;
 
     private final DocumentReader documentReader;
     private final StudyGenerator studyGenerator;
