@@ -1,5 +1,6 @@
 package com.roadstudy.application.study;
 
+import java.util.List;
 import java.util.UUID;
 
 import com.roadstudy.application.study.exception.StudyAudioException;
@@ -27,6 +28,11 @@ public class StudyQueryService implements FindStudyAudio, FindStudy {
     @Override
     public StudySession findById(Long studyId) {
         return studyRepository.findById(studyId).orElseThrow(StudyNotFoundException::new);
+    }
+
+    @Override
+    public List<StudySession> findAll() {
+        return studyRepository.findAllByCreatedAtDescending();
     }
 
     private static UUID parseAudioId(String audioId) {

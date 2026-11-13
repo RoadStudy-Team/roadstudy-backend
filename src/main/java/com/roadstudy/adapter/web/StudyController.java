@@ -1,6 +1,7 @@
 package com.roadstudy.adapter.web;
 
 import java.io.IOException;
+import java.util.List;
 import java.net.URI;
 
 import com.roadstudy.adapter.web.docs.StudyAudioApiDocs;
@@ -9,6 +10,7 @@ import com.roadstudy.adapter.web.request.GenerateAudioRequest;
 import com.roadstudy.adapter.web.response.ExtractTextResponse;
 import com.roadstudy.adapter.web.response.StudyAudioResponse;
 import com.roadstudy.adapter.web.response.StudyExplanationResponse;
+import com.roadstudy.adapter.web.response.StudyListItemResponse;
 import com.roadstudy.adapter.web.response.StudyResponse;
 import com.roadstudy.application.study.port.in.ExtractStudyText;
 import com.roadstudy.application.study.port.in.FindStudy;
@@ -49,6 +51,12 @@ public class StudyController implements StudyControllerDocs, StudyAudioApiDocs {
     private final FindStudyAudio findStudyAudio;
     private final StartStudyGeneration startStudyGeneration;
     private final FindStudy findStudy;
+
+    @Override
+    @GetMapping
+    public ResponseEntity<List<StudyListItemResponse>> listStudies() {
+        return ResponseEntity.ok(findStudy.findAll().stream().map(StudyListItemResponse::from).toList());
+    }
 
     @Override
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
