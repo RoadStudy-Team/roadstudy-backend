@@ -32,7 +32,7 @@ public class StudyQueryService implements FindStudyAudio, FindStudy {
 
     @Override
     public List<StudySession> findAll() {
-        return studyRepository.findAllNewestFirst();
+        return studyRepository.findAllByCreatedAtDescending();
     }
 
     private static UUID parseAudioId(String audioId) {

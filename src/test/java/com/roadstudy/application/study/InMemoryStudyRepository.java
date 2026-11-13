@@ -34,7 +34,7 @@ public class InMemoryStudyRepository implements StudyRepository {
     }
 
     @Override
-    public List<StudySession> findAllNewestFirst() {
+    public List<StudySession> findAllByCreatedAtDescending() {
         return sessions.values().stream()
                 .sorted(Comparator.comparing(StudySession::getCreatedAt).thenComparing(StudySession::getId).reversed())
                 .toList();

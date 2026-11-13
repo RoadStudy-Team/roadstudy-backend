@@ -15,7 +15,7 @@ public class StudyPersistenceAdapter implements StudyRepository {
     private final StudyJpaRepository repository;
 
     @Override
-    public List<StudySession> findAllNewestFirst() {
+    public List<StudySession> findAllByCreatedAtDescending() {
         return repository.findAll(Sort.by(Sort.Direction.DESC, "createdAt", "id"));
     }
 

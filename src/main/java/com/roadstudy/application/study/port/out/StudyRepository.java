@@ -10,5 +10,5 @@ public interface StudyRepository {
 
     Optional<StudySession> findById(Long id);
 
-    List<StudySession> findAllNewestFirst();
+    List<StudySession> findAllByCreatedAtDescending();
 }
