@@ -1,6 +1,7 @@
 package com.roadstudy;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 
 import com.jayway.jsonpath.JsonPath;
 import com.roadstudy.application.study.ExtractedStudyText;
@@ -8,6 +9,9 @@ import com.roadstudy.application.study.StudyExplanation;
 import com.roadstudy.application.study.port.out.DocumentReader;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.application.study.port.out.StudyGenerator;
+import com.roadstudy.application.study.port.out.StudyRepository;
+import com.roadstudy.domain.study.StudySession;
+import com.roadstudy.domain.study.StudySessionCreateRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,9 +19,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,6 +45,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("애플리케이션 통합 테스트")
 class RoadstudyApplicationTests {
     @Autowired MockMvc mvc;
+    @Autowired StudyRepository studyRepository;
+    @Autowired JdbcTemplate jdbcTemplate;
     // 문서 읽기와 유료 외부 API만 대체하고 스레드 풀, 서비스, DB, 음성 저장소는 실제 빈을 사용한다.
     @MockitoBean DocumentReader documentReader;
     @MockitoBean StudyGenerator studyGenerator;
@@ -66,6 +75,9 @@ class RoadstudyApplicationTests {
                         + ".content['audio/mpeg'].schema.format").value("binary"))
                 .andExpect(jsonPath("$.paths['/api/studies/audio/{audioId}'].get.responses['416']"
                         + ".content['application/problem+json']").exists())
+                .andExpect(jsonPath("$.paths['/api/studies'].get.responses['200']"
+                        + ".content['application/json'].schema.items['$ref']")
+                        .value("#/components/schemas/StudyListItemResponse"))
                 .andExpect(jsonPath("$.paths['/api/studies'].post.summary").value("학습 자동 생성 시작"))
                 .andExpect(jsonPath("$.paths['/api/studies'].post.requestBody"
                         + ".content['multipart/form-data'].schema.properties.file.format").value("binary"))
@@ -74,6 +86,45 @@ class RoadstudyApplicationTests {
                 .andExpect(jsonPath("$.paths['/api/studies/{studyId}'].get.summary").value("학습 세션 조회"))
                 .andExpect(jsonPath("$.paths['/api/studies/{studyId}'].get.responses['404']"
                         + ".content['application/problem+json']").exists());
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("학습 목록은 빈 배열을 지원하고 생성 시각과 ID 내림차순으로 요약 정보만 반환한다")
+    void listsStudySummaries() throws Exception {
+        jdbcTemplate.update("delete from study_sessions");
+        mvc.perform(get("/api/studies"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+
+        LocalDateTime sameTime = LocalDateTime.of(2026, 1, 2, 12, 0);
+        var first = saveStudy("first.pdf", sameTime);
+        first.changeExplanation("학습 제목", "학습 요약", "설명 대본");
+        studyRepository.save(first);
+        var second = saveStudy("second.pdf", sameTime);
+        var older = saveStudy("older.pdf", sameTime.minusDays(1));
+
+        mvc.perform(get("/api/studies"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].id").value(second.getId().intValue()))
+                .andExpect(jsonPath("$[1].id").value(first.getId().intValue()))
+                .andExpect(jsonPath("$[2].id").value(older.getId().intValue()))
+                .andExpect(jsonPath("$[0].originalFileName").value("second.pdf"))
+                .andExpect(jsonPath("$[0].title").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$[0].summary").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$[1].summary").value("학습 요약"))
+                .andExpect(jsonPath("$[1].explanationScript").doesNotHaveJsonPath())
+                .andExpect(jsonPath("$[0].status").value("PROCESSING"))
+                .andExpect(jsonPath("$[0].createdAt").exists())
+                .andExpect(jsonPath("$[0].explanationScript").doesNotHaveJsonPath())
+                .andExpect(jsonPath("$[0].audioUrl").doesNotHaveJsonPath());
+    }
+
+    private StudySession saveStudy(String fileName, LocalDateTime createdAt) {
+        var session = StudySession.create(new StudySessionCreateRequest(fileName));
+        ReflectionTestUtils.setField(session, "createdAt", createdAt);
+        return studyRepository.save(session);
     }
 
     @Test

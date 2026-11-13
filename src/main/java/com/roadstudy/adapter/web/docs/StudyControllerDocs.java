@@ -1,11 +1,14 @@
 package com.roadstudy.adapter.web.docs;
 
 import java.io.IOException;
+import java.util.List;
 
 import com.roadstudy.adapter.web.response.ExtractTextResponse;
 import com.roadstudy.adapter.web.response.StudyExplanationResponse;
+import com.roadstudy.adapter.web.response.StudyListItemResponse;
 import com.roadstudy.adapter.web.response.StudyResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -15,6 +18,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface StudyControllerDocs {
+    @Operation(summary = "학습 세션 목록 조회", description = "등록된 학습 세션을 최신 등록순으로 반환합니다.")
+    @ApiResponse(responseCode = "200", description = "목록 조회 성공. 등록된 세션이 없으면 빈 배열을 반환합니다.",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    array = @ArraySchema(schema = @Schema(implementation = StudyListItemResponse.class))))
+    ResponseEntity<List<StudyListItemResponse>> listStudies();
+
     @Operation(summary = "PDF 텍스트 추출", description = "최대 50MB의 PDF를 업로드해 전체 페이지의 텍스트를 추출합니다.")
     @ApiResponse(responseCode = "200", description = "텍스트 추출 성공",
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,

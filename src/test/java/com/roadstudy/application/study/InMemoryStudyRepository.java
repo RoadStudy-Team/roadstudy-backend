@@ -1,6 +1,7 @@
 package com.roadstudy.application.study;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,13 @@ public class InMemoryStudyRepository implements StudyRepository {
     @Override
     public Optional<StudySession> findById(Long id) {
         return Optional.ofNullable(sessions.get(id));
+    }
+
+    @Override
+    public List<StudySession> findAllNewestFirst() {
+        return sessions.values().stream()
+                .sorted(Comparator.comparing(StudySession::getCreatedAt).thenComparing(StudySession::getId).reversed())
+                .toList();
     }
 
     public List<StudyStatus> savedStatuses() {
