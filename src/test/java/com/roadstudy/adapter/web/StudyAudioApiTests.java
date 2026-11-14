@@ -195,7 +195,7 @@ class StudyAudioApiTests {
                 Runnable::run);
         var queryService = new StudyQueryService(storage, mock(StudyRepository.class));
         var controller = new StudyController(
-                modifyService, modifyService, modifyService, queryService, modifyService, queryService);
+                modifyService, queryService, modifyService, queryService);
         return MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new GlobalExceptionHandler()).build();
     }
 

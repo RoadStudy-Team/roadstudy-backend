@@ -31,7 +31,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @DisplayName("Google TTS 음성 합성 어댑터")
-class GoogleSpeechSynthesizerTests {
+class
+GoogleSpeechSynthesizerTests {
     private static final byte[] AUDIO_BYTES = {(byte) 0xFF, (byte) 0xF3, 0x44, (byte) 0xC4};
 
     private final TextToSpeechClient client = mock(TextToSpeechClient.class);

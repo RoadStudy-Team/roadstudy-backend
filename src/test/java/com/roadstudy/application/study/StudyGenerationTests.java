@@ -52,7 +52,7 @@ class StudyGenerationTests {
     @BeforeEach
     void setUp() {
         when(reader.read(DOCUMENT)).thenReturn(new ExtractedStudyText(1, TEXT));
-        when(generator.generate(TEXT)).thenReturn(EXPLANATION);
+        when(generator.generateExplanation(TEXT)).thenReturn(EXPLANATION);
         when(synthesizer.synthesize(EXPLANATION.explanationScript())).thenReturn(AUDIO_BYTES);
         when(storage.save(any(UUID.class), eq(AUDIO_BYTES)))
                 .thenAnswer(call -> new StudyAudio(call.getArgument(0), AUDIO_PATH));
@@ -102,7 +102,7 @@ class StudyGenerationTests {
     @Test
     @DisplayName("대본 생성이 실패하면 음성을 만들지 않고 세션을 실패 처리한다")
     void failsSessionWhenExplanationFails() throws Exception {
-        when(generator.generate(TEXT)).thenThrow(StudyExplanationException.generationFailed());
+        when(generator.generateExplanation(TEXT)).thenThrow(StudyExplanationException.generationFailed());
         Long id = start().getId();
 
         runBackgroundTask();
@@ -119,7 +119,7 @@ class StudyGenerationTests {
     void failsSessionWhenScriptExceedsSpeechLimit() throws Exception {
         // 한글 1,667자는 5,001바이트로 음성 합성 제한을 1바이트 넘는다.
         String script = "가".repeat(10_001);
-        when(generator.generate(TEXT)).thenReturn(new StudyExplanation("제목", "요약", script));
+        when(generator.generateExplanation(TEXT)).thenReturn(new StudyExplanation("제목", "요약", script));
         Long id = start().getId();
 
         runBackgroundTask();

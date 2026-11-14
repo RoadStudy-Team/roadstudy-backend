@@ -46,8 +46,8 @@ class StudyAudioTests {
         when(storage.save(any(UUID.class), eq(AUDIO_BYTES)))
                 .thenAnswer(call -> new StudyAudio(call.getArgument(0), Path.of("audio.mp3")));
 
-        var first = modifyService.generate(" 설명 대본\n");
-        var second = modifyService.generate("설명 대본");
+        var first = modifyService.generateAudio(" 설명 대본\n");
+        var second = modifyService.generateAudio("설명 대본");
 
         assertThat(first.path()).isEqualTo(Path.of("audio.mp3"));
         assertThat(first.audioId()).isNotNull().isNotEqualTo(second.audioId());
@@ -58,7 +58,7 @@ class StudyAudioTests {
     @ValueSource(strings = {"", "  ", "\n\t"})
     @DisplayName("대본이 없거나 공백뿐이면 합성기를 호출하지 않고 거부한다")
     void rejectsEmptyScript(String script) {
-        assertFailure(() -> modifyService.generate(script), FailureType.INVALID_INPUT, "EMPTY_SCRIPT");
+        assertFailure(() -> modifyService.generateAudio(script), FailureType.INVALID_INPUT, "EMPTY_SCRIPT");
         verifyNoInteractions(synthesizer, storage);
     }
 
@@ -70,13 +70,13 @@ class StudyAudioTests {
         when(storage.save(any(UUID.class), eq(AUDIO_BYTES)))
                 .thenAnswer(call -> new StudyAudio(call.getArgument(0), Path.of("audio.mp3")));
 
-        assertThat(modifyService.generate(SCRIPT_AT_LIMIT).audioId()).isNotNull();
+        assertThat(modifyService.generateAudio(SCRIPT_AT_LIMIT).audioId()).isNotNull();
     }
 
     @Test
     @DisplayName("30,000바이트보다 1바이트 길면 합성기 호출 전에 거부한다")
     void rejectsScriptOverByteLimit() {
-        assertFailure(() -> modifyService.generate(SCRIPT_AT_LIMIT + "c"),
+        assertFailure(() -> modifyService.generateAudio(SCRIPT_AT_LIMIT + "c"),
                 FailureType.UNPROCESSABLE_CONTENT, "TTS_INPUT_TOO_LONG");
         verifyNoInteractions(synthesizer, storage);
     }
@@ -86,7 +86,7 @@ class StudyAudioTests {
     void doesNotStoreWhenSynthesisFails() {
         when(synthesizer.synthesize("설명 대본")).thenThrow(StudyAudioException.generationTimedOut());
 
-        assertFailure(() -> modifyService.generate("설명 대본"), FailureType.EXTERNAL_SERVICE_TIMEOUT, "TTS_TIMEOUT");
+        assertFailure(() -> modifyService.generateAudio("설명 대본"), FailureType.EXTERNAL_SERVICE_TIMEOUT, "TTS_TIMEOUT");
         verifyNoInteractions(storage);
     }
 

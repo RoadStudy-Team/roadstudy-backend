@@ -38,11 +38,11 @@ class StudyModifyServiceTests {
         String text = "😀".repeat(60_000);
         var explanation = new StudyExplanation("제목", "요약", "대본");
         when(reader.read(DOCUMENT)).thenReturn(new ExtractedStudyText(1, " " + text + "\n"));
-        when(generator.generate(text)).thenReturn(explanation);
+        when(generator.generateExplanation(text)).thenReturn(explanation);
 
         when(repository.save(any(StudySession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        StudySession session = service.generate("lecture.pdf", new ByteArrayInputStream(DOCUMENT));
+        StudySession session = service.generateExplanation("lecture.pdf", new ByteArrayInputStream(DOCUMENT));
 
         assertThat(session.getOriginalFileName()).isEqualTo("lecture.pdf");
         assertThat(session.getTitle()).isEqualTo(explanation.title());
@@ -58,7 +58,7 @@ class StudyModifyServiceTests {
         when(reader.read(DOCUMENT)).thenReturn(new ExtractedStudyText(1, "가".repeat(60_001)));
 
         assertThatExceptionOfType(StudyExplanationException.class)
-                .isThrownBy(() -> service.generate("lecture.pdf", new ByteArrayInputStream(DOCUMENT)))
+                .isThrownBy(() -> service.generateExplanation("lecture.pdf", new ByteArrayInputStream(DOCUMENT)))
                 .satisfies(ex -> {
                     assertThat(ex.getFailureType()).isEqualTo(FailureType.UNPROCESSABLE_CONTENT);
                     assertThat(ex.getCode()).isEqualTo("STUDY_TEXT_TOO_LONG");

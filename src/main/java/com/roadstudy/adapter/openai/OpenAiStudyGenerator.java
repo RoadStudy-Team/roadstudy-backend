@@ -56,7 +56,7 @@ public class OpenAiStudyGenerator implements StudyGenerator {
     }
 
     @Override
-    public StudyExplanation generate(String text) {
+    public StudyExplanation generateExplanation(String text) {
         JsonNode response;
         try {
             String body = client.post().uri("/responses")

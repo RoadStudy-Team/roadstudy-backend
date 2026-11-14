@@ -83,7 +83,7 @@ class StudyGenerationApiTests {
                 new PdfBoxDocumentReader(), generator, repository, speechSynthesizer, storage, backgroundTasks::add);
         var queryService = new StudyQueryService(storage, repository);
         return MockMvcBuilders.standaloneSetup(new StudyController(
-                        modifyService, modifyService, modifyService, queryService, modifyService, queryService))
+                        modifyService, queryService, modifyService, queryService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -110,7 +110,7 @@ class StudyGenerationApiTests {
     void completesStudyWithLongScript() throws Exception {
         String script = "가".repeat(3_747) + "a";
         assertThat(script.getBytes(StandardCharsets.UTF_8)).hasSize(11_242);
-        when(generator.generate("Hello PDF")).thenReturn(new StudyExplanation("제목", "요약", script));
+        when(generator.generateExplanation("Hello PDF")).thenReturn(new StudyExplanation("제목", "요약", script));
 
         var client = mock(TextToSpeechClient.class);
         @SuppressWarnings("unchecked")
@@ -146,7 +146,7 @@ class StudyGenerationApiTests {
     @Test
     @DisplayName("백그라운드 생성이 실패하면 세션 조회가 실패 상태를 반환한다")
     void returnsFailedStudy() throws Exception {
-        when(generator.generate("Hello PDF")).thenThrow(StudyExplanationException.generationTimedOut());
+        when(generator.generateExplanation("Hello PDF")).thenThrow(StudyExplanationException.generationTimedOut());
         String location = upload(pdf("Hello PDF")).andReturn().getResponse().getHeader(HttpHeaders.LOCATION);
 
         backgroundTasks.remove().run();

@@ -10,10 +10,8 @@ import com.roadstudy.application.study.exception.PdfExtractionException;
 import com.roadstudy.application.study.exception.StudyAudioException;
 import com.roadstudy.application.study.exception.StudyExplanationException;
 import com.roadstudy.application.study.exception.StudyNotFoundException;
-import com.roadstudy.application.study.port.in.ExtractStudyText;
-import com.roadstudy.application.study.port.in.GenerateStudyAudio;
-import com.roadstudy.application.study.port.in.GenerateStudyExplanation;
 import com.roadstudy.application.study.port.in.StartStudyGeneration;
+import com.roadstudy.application.study.port.in.StudyGenerationSteps;
 import com.roadstudy.application.study.port.out.AudioStorage;
 import com.roadstudy.application.study.port.out.DocumentReader;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
@@ -29,8 +27,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StudyModifyService
-        implements ExtractStudyText, GenerateStudyExplanation, GenerateStudyAudio, StartStudyGeneration {
+public class StudyModifyService implements StudyGenerationSteps, StartStudyGeneration {
     private static final int MAX_FILE_BYTES = 50 * 1024 * 1024;
     private static final int MAX_GENERATION_CHARACTERS = 60_000;
     private static final int MAX_SCRIPT_BYTES = 30_000;
@@ -43,17 +40,19 @@ public class StudyModifyService
     private final Executor studyGenerationExecutor;
 
     @Override
-    public StudySession generate(String originalFileName, InputStream input) throws IOException {
+    public StudySession generateExplanation(String originalFileName, InputStream input) {
         String text = extractGenerationText(input);
 
         StudySession session = StudySession.create(new StudySessionCreateRequest(originalFileName));
-        StudyExplanation explanation = studyGenerator.generate(text);
+
+        StudyExplanation explanation = studyGenerator.generateExplanation(text);
         session.changeExplanation(explanation.title(), explanation.summary(), explanation.explanationScript());
+
         return studyRepository.save(session);
     }
 
     @Override
-    public StudyAudio generate(String explanationScript) {
+    public StudyAudio generateAudio(String explanationScript) {
         if (explanationScript == null || explanationScript.isBlank()) {
             throw StudyAudioException.emptyScript();
         }
@@ -68,13 +67,13 @@ public class StudyModifyService
     }
 
     @Override
-    public StudySession start(String originalFileName, InputStream input) throws IOException {
+    public StudySession start(String originalFileName, InputStream input) {
         // 업로드 스트림은 요청이 끝나면 닫히므로 텍스트 추출과 입력 검증은 요청 안에서 끝낸다.
         String text = extractGenerationText(input);
 
-        StudySession session = studyRepository.save(
-                StudySession.create(new StudySessionCreateRequest(originalFileName)));
+        StudySession session = studyRepository.save(StudySession.create(new StudySessionCreateRequest(originalFileName)));
         Long studyId = session.getId();
+
         try {
             studyGenerationExecutor.execute(() -> generateInBackground(studyId, text));
         } catch (RuntimeException ex) {
@@ -85,8 +84,8 @@ public class StudyModifyService
     }
 
     @Override
-    public ExtractedStudyText extract(InputStream input) throws IOException {
-        byte[] content = input.readNBytes(MAX_FILE_BYTES + 1);
+    public ExtractedStudyText extractText(InputStream input) {
+        byte[] content = readPdfContent(input);
 
         if (content.length == 0) {
             throw PdfExtractionException.emptyFile();
@@ -105,8 +104,16 @@ public class StudyModifyService
         return new ExtractedStudyText(document.pageCount(), text);
     }
 
-    private String extractGenerationText(InputStream input) throws IOException {
-        String text = extract(input).text();
+    private byte[] readPdfContent(InputStream input) {
+        try {
+            return input.readNBytes(MAX_FILE_BYTES + 1);
+        } catch (IOException ex) {
+            throw PdfExtractionException.readFailed(ex);
+        }
+    }
+
+    private String extractGenerationText(InputStream input) {
+        String text = extractText(input).text();
         if (text.codePointCount(0, text.length()) > MAX_GENERATION_CHARACTERS) {
             throw StudyExplanationException.textTooLong(MAX_GENERATION_CHARACTERS);
         }
@@ -116,11 +123,11 @@ public class StudyModifyService
     private void generateInBackground(Long studyId, String text) {
         try {
             StudySession session = studyRepository.findById(studyId).orElseThrow(StudyNotFoundException::new);
-            StudyExplanation explanation = studyGenerator.generate(text);
+            StudyExplanation explanation = studyGenerator.generateExplanation(text);
             session.changeExplanation(explanation.title(), explanation.summary(), explanation.explanationScript());
             session = studyRepository.save(session);
 
-            StudyAudio audio = generate(explanation.explanationScript());
+            StudyAudio audio = generateAudio(explanation.explanationScript());
             session.complete(audio.path().toString());
             studyRepository.save(session);
         } catch (RuntimeException ex) {

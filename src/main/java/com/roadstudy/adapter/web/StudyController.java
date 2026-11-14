@@ -12,12 +12,11 @@ import com.roadstudy.adapter.web.response.StudyAudioResponse;
 import com.roadstudy.adapter.web.response.StudyExplanationResponse;
 import com.roadstudy.adapter.web.response.StudyListItemResponse;
 import com.roadstudy.adapter.web.response.StudyResponse;
-import com.roadstudy.application.study.port.in.ExtractStudyText;
+import com.roadstudy.application.study.ExtractedStudyText;
 import com.roadstudy.application.study.port.in.FindStudy;
 import com.roadstudy.application.study.port.in.FindStudyAudio;
-import com.roadstudy.application.study.port.in.GenerateStudyAudio;
-import com.roadstudy.application.study.port.in.GenerateStudyExplanation;
 import com.roadstudy.application.study.port.in.StartStudyGeneration;
+import com.roadstudy.application.study.port.in.StudyGenerationSteps;
 import com.roadstudy.application.study.StudyAudio;
 import com.roadstudy.domain.study.StudySession;
 import lombok.RequiredArgsConstructor;
@@ -45,9 +44,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class StudyController implements StudyControllerDocs, StudyAudioApiDocs {
     private static final MediaType AUDIO_MPEG = MediaType.parseMediaType("audio/mpeg");
 
-    private final ExtractStudyText extractStudyText;
-    private final GenerateStudyExplanation generateStudyExplanation;
-    private final GenerateStudyAudio generateStudyAudio;
+    private final StudyGenerationSteps studyGenerationSteps;
     private final FindStudyAudio findStudyAudio;
     private final StartStudyGeneration startStudyGeneration;
     private final FindStudy findStudy;
@@ -79,7 +76,7 @@ public class StudyController implements StudyControllerDocs, StudyAudioApiDocs {
     @PostMapping(path = "/generate-explanation", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<StudyExplanationResponse> generateExplanation(@RequestPart("file") MultipartFile file) throws IOException {
         try (var input = file.getInputStream()) {
-            StudySession session = generateStudyExplanation.generate(file.getOriginalFilename(), input);
+            StudySession session = studyGenerationSteps.generateExplanation(file.getOriginalFilename(), input);
             return ResponseEntity.ok(StudyExplanationResponse.from(session));
         }
     }
@@ -88,14 +85,15 @@ public class StudyController implements StudyControllerDocs, StudyAudioApiDocs {
     @PostMapping(path = "/extract-text", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ExtractTextResponse> extractText(@RequestPart("file") MultipartFile file) throws IOException {
         try (var input = file.getInputStream()) {
-            return ResponseEntity.ok(ExtractTextResponse.from(file.getOriginalFilename(), extractStudyText.extract(input)));
+            ExtractedStudyText extractText = studyGenerationSteps.extractText(input);
+            return ResponseEntity.ok(ExtractTextResponse.from(file.getOriginalFilename(), extractText));
         }
     }
 
     @Override
     @PostMapping(path = "/generate-audio", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<StudyAudioResponse> generateAudio(@RequestBody GenerateAudioRequest request) {
-        StudyAudio audio = generateStudyAudio.generate(request.explanationScript());
+        StudyAudio audio = studyGenerationSteps.generateAudio(request.explanationScript());
         return ResponseEntity.ok(StudyAudioResponse.from(audio));
     }
 

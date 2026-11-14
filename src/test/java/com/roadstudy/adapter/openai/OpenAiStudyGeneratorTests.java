@@ -49,7 +49,7 @@ class OpenAiStudyGeneratorTests {
                         {"title":"제목","summary":"요약","explanationScript":"설명 대본"}
                         """), MediaType.APPLICATION_JSON));
 
-        assertThat(generator.generate("학습 자료")).isEqualTo(new StudyExplanation("제목", "요약", "설명 대본"));
+        assertThat(generator.generateExplanation("학습 자료")).isEqualTo(new StudyExplanation("제목", "요약", "설명 대본"));
         server.verify();
     }
 
@@ -130,7 +130,7 @@ class OpenAiStudyGeneratorTests {
 
     private void assertFailure(FailureType type, String code) {
         assertThatExceptionOfType(StudyExplanationException.class)
-                .isThrownBy(() -> generator.generate("학습 자료"))
+                .isThrownBy(() -> generator.generateExplanation("학습 자료"))
                 .satisfies(ex -> {
                     assertThat(ex.getFailureType()).isEqualTo(type);
                     assertThat(ex.getCode()).isEqualTo(code);

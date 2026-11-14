@@ -140,7 +140,7 @@ class RoadstudyApplicationTests {
     void completesUploadedStudyInBackground() throws Exception {
         byte[] audio = {(byte) 0xFF, (byte) 0xF3, 0x44, (byte) 0xC4};
         when(documentReader.read(any())).thenReturn(new ExtractedStudyText(1, "학습 자료"));
-        when(studyGenerator.generate("학습 자료")).thenReturn(new StudyExplanation("제목", "요약", "설명 대본"));
+        when(studyGenerator.generateExplanation("학습 자료")).thenReturn(new StudyExplanation("제목", "요약", "설명 대본"));
         when(speechSynthesizer.synthesize("설명 대본")).thenReturn(audio);
 
         String location = mvc.perform(multipart("/api/studies")

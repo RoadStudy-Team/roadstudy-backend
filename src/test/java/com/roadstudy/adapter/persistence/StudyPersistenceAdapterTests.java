@@ -69,7 +69,7 @@ class StudyPersistenceAdapterTests {
                 studyRepository,
                 mock(SpeechSynthesizer.class), mock(AudioStorage.class), Runnable::run);
 
-        Long id = service.generate("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
+        Long id = service.generateExplanation("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
         assertThat(id).isNotNull();
         entityManager.flush();
         entityManager.clear();
