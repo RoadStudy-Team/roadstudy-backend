@@ -55,6 +55,9 @@ RoadStudy 차량용 앱
 
 백엔드는 Ports & Adapters 아키텍처를 기반으로 구성합니다.
 
+### Hexagonal Architecture
+![RoadStudy 백엔드 헥사고날 아키텍처](docs/images/roadstudy-backend-architecture.png)
+
 ```text
 roadstudy-backend/
 ├── src/
