@@ -1,47 +1,31 @@
 package com.roadstudy.adapter.web;
 
-import java.io.IOException;
-import java.util.List;
-import java.net.URI;
-
-import com.roadstudy.adapter.web.docs.StudyAudioApiDocs;
 import com.roadstudy.adapter.web.docs.StudyControllerDocs;
 import com.roadstudy.adapter.web.request.GenerateAudioRequest;
-import com.roadstudy.adapter.web.response.ExtractTextResponse;
-import com.roadstudy.adapter.web.response.StudyAudioResponse;
-import com.roadstudy.adapter.web.response.StudyExplanationResponse;
-import com.roadstudy.adapter.web.response.StudyListItemResponse;
-import com.roadstudy.adapter.web.response.StudyResponse;
-import com.roadstudy.application.study.ExtractedStudyText;
+import com.roadstudy.adapter.web.response.*;
+import com.roadstudy.application.study.model.ExtractedStudyText;
+import com.roadstudy.application.study.model.StudyAudio;
 import com.roadstudy.application.study.port.in.FindStudy;
 import com.roadstudy.application.study.port.in.FindStudyAudio;
 import com.roadstudy.application.study.port.in.StartStudyGeneration;
 import com.roadstudy.application.study.port.in.StudyGenerationSteps;
-import com.roadstudy.application.study.StudyAudio;
 import com.roadstudy.domain.study.StudySession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpRange;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.ErrorResponseException;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/studies")
-public class StudyController implements StudyControllerDocs, StudyAudioApiDocs {
+public class StudyController implements StudyControllerDocs {
     private static final MediaType AUDIO_MPEG = MediaType.parseMediaType("audio/mpeg");
 
     private final StudyGenerationSteps studyGenerationSteps;

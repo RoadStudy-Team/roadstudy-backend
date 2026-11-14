@@ -1,6 +1,6 @@
 package com.roadstudy.adapter.web.response;
 
-import com.roadstudy.application.study.ExtractedStudyText;
+import com.roadstudy.application.study.model.ExtractedStudyText;
 
 public record ExtractTextResponse(String fileName, int pageCount, int characterCount, String text) {
 

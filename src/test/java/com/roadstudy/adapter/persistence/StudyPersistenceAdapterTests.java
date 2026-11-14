@@ -1,16 +1,12 @@
 package com.roadstudy.adapter.persistence;
 
-import java.io.ByteArrayInputStream;
-import java.nio.file.Path;
-import java.util.UUID;
-
-import com.roadstudy.application.study.ExtractedStudyText;
-import com.roadstudy.application.study.StudyAudio;
+import com.roadstudy.application.study.model.ExtractedStudyText;
+import com.roadstudy.application.study.model.StudyAudio;
+import com.roadstudy.application.study.model.StudyExplanation;
 import com.roadstudy.application.study.port.out.AudioStorage;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.application.study.port.out.StudyRepository;
-import com.roadstudy.application.study.StudyExplanation;
-import com.roadstudy.application.study.StudyModifyService;
+import com.roadstudy.application.study.service.StudyModifyService;
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.domain.study.StudySessionCreateRequest;
 import com.roadstudy.domain.study.StudyStatus;
@@ -20,6 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+
+import java.io.ByteArrayInputStream;
+import java.nio.file.Path;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;

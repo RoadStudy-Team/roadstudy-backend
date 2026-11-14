@@ -1,23 +1,15 @@
 package com.roadstudy.adapter.web;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-
-import com.roadstudy.application.study.StudyQueryService;
-
 import com.roadstudy.adapter.pdf.PdfBoxDocumentReader;
 import com.roadstudy.application.study.exception.StudyExplanationException;
+import com.roadstudy.application.study.model.StudyExplanation;
 import com.roadstudy.application.study.port.in.FindStudy;
 import com.roadstudy.application.study.port.in.FindStudyAudio;
 import com.roadstudy.application.study.port.out.AudioStorage;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.application.study.port.out.StudyGenerator;
 import com.roadstudy.application.study.port.out.StudyRepository;
-import com.roadstudy.application.study.StudyExplanation;
-import com.roadstudy.application.study.StudyModifyService;
+import com.roadstudy.application.study.service.StudyModifyService;
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.global.exception.GlobalExceptionHandler;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -36,16 +28,18 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @DisplayName("PDF 텍스트 추출 API")
 class StudyControllerTests {

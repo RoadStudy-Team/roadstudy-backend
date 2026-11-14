@@ -1,17 +1,12 @@
 package com.roadstudy.adapter.openai;
 
-import java.net.SocketTimeoutException;
-import java.net.http.HttpTimeoutException;
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import com.roadstudy.application.study.StudyExplanation;
 import com.roadstudy.application.study.exception.StudyExplanationException;
+import com.roadstudy.application.study.model.StudyExplanation;
 import com.roadstudy.application.study.port.out.StudyGenerator;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +17,11 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
+
+import java.net.SocketTimeoutException;
+import java.net.http.HttpTimeoutException;
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class OpenAiStudyGenerator implements StudyGenerator {

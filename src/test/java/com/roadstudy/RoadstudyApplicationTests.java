@@ -1,11 +1,8 @@
 package com.roadstudy;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-
 import com.jayway.jsonpath.JsonPath;
-import com.roadstudy.application.study.ExtractedStudyText;
-import com.roadstudy.application.study.StudyExplanation;
+import com.roadstudy.application.study.model.ExtractedStudyText;
+import com.roadstudy.application.study.model.StudyExplanation;
 import com.roadstudy.application.study.port.out.DocumentReader;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.application.study.port.out.StudyGenerator;
@@ -25,6 +22,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;

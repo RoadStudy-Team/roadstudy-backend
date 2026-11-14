@@ -1,28 +1,27 @@
-package com.roadstudy.application.study;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.UUID;
-import java.util.concurrent.Executor;
+package com.roadstudy.application.study.service;
 
 import com.roadstudy.application.study.exception.PdfExtractionException;
 import com.roadstudy.application.study.exception.StudyAudioException;
 import com.roadstudy.application.study.exception.StudyExplanationException;
 import com.roadstudy.application.study.exception.StudyNotFoundException;
+import com.roadstudy.application.study.model.ExtractedStudyText;
+import com.roadstudy.application.study.model.StudyAudio;
+import com.roadstudy.application.study.model.StudyExplanation;
 import com.roadstudy.application.study.port.in.StartStudyGeneration;
 import com.roadstudy.application.study.port.in.StudyGenerationSteps;
-import com.roadstudy.application.study.port.out.AudioStorage;
-import com.roadstudy.application.study.port.out.DocumentReader;
-import com.roadstudy.application.study.port.out.SpeechSynthesizer;
-import com.roadstudy.application.study.port.out.StudyGenerator;
-import com.roadstudy.application.study.port.out.StudyRepository;
+import com.roadstudy.application.study.port.out.*;
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.domain.study.StudySessionCreateRequest;
 import com.roadstudy.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
+import java.util.concurrent.Executor;
 
 @Slf4j
 @Service

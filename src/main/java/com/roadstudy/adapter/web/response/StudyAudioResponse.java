@@ -1,8 +1,8 @@
 package com.roadstudy.adapter.web.response;
 
-import java.util.UUID;
+import com.roadstudy.application.study.model.StudyAudio;
 
-import com.roadstudy.application.study.StudyAudio;
+import java.util.UUID;
 
 public record StudyAudioResponse(UUID audioId, String audioUrl) {
 

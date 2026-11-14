@@ -1,4 +1,4 @@
-package com.roadstudy.application.study;
+package com.roadstudy.application.study.model;
 
 import java.nio.file.Path;
 import java.util.UUID;

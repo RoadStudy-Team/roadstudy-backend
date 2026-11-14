@@ -1,16 +1,8 @@
 package com.roadstudy.adapter.tts;
 
-import java.io.ByteArrayOutputStream;
-import java.util.List;
-
 import com.google.api.gax.rpc.ApiException;
 import com.google.api.gax.rpc.StatusCode;
-import com.google.cloud.texttospeech.v1.AudioConfig;
-import com.google.cloud.texttospeech.v1.AudioEncoding;
-import com.google.cloud.texttospeech.v1.SynthesisInput;
-import com.google.cloud.texttospeech.v1.SynthesizeSpeechRequest;
-import com.google.cloud.texttospeech.v1.TextToSpeechClient;
-import com.google.cloud.texttospeech.v1.VoiceSelectionParams;
+import com.google.cloud.texttospeech.v1.*;
 import com.google.protobuf.ByteString;
 import com.roadstudy.application.study.exception.StudyAudioException;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
@@ -20,6 +12,9 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
+
+import java.io.ByteArrayOutputStream;
+import java.util.List;
 
 @Slf4j
 @Component

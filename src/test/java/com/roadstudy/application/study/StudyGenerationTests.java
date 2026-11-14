@@ -1,5 +1,23 @@
 package com.roadstudy.application.study;
 
+import com.roadstudy.application.study.exception.StudyExplanationException;
+import com.roadstudy.application.study.exception.StudyNotFoundException;
+import com.roadstudy.application.study.model.ExtractedStudyText;
+import com.roadstudy.application.study.model.StudyAudio;
+import com.roadstudy.application.study.model.StudyExplanation;
+import com.roadstudy.application.study.port.out.AudioStorage;
+import com.roadstudy.application.study.port.out.DocumentReader;
+import com.roadstudy.application.study.port.out.SpeechSynthesizer;
+import com.roadstudy.application.study.port.out.StudyGenerator;
+import com.roadstudy.application.study.service.StudyModifyService;
+import com.roadstudy.application.study.service.StudyQueryService;
+import com.roadstudy.domain.study.StudySession;
+import com.roadstudy.domain.study.StudyStatus;
+import com.roadstudy.global.exception.FailureType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -8,27 +26,10 @@ import java.util.Deque;
 import java.util.UUID;
 import java.util.concurrent.RejectedExecutionException;
 
-import com.roadstudy.application.study.exception.StudyExplanationException;
-import com.roadstudy.application.study.exception.StudyNotFoundException;
-import com.roadstudy.application.study.port.out.AudioStorage;
-import com.roadstudy.application.study.port.out.DocumentReader;
-import com.roadstudy.application.study.port.out.SpeechSynthesizer;
-import com.roadstudy.application.study.port.out.StudyGenerator;
-import com.roadstudy.domain.study.StudySession;
-import com.roadstudy.domain.study.StudyStatus;
-import com.roadstudy.global.exception.FailureType;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @DisplayName("학습 자동 생성")
 class StudyGenerationTests {

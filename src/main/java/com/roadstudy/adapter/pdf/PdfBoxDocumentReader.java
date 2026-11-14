@@ -1,17 +1,17 @@
 package com.roadstudy.adapter.pdf;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-
-import com.roadstudy.application.study.ExtractedStudyText;
 import com.roadstudy.application.study.exception.PdfExtractionException;
+import com.roadstudy.application.study.model.ExtractedStudyText;
 import com.roadstudy.application.study.port.out.DocumentReader;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 @Component
 public class PdfBoxDocumentReader implements DocumentReader {

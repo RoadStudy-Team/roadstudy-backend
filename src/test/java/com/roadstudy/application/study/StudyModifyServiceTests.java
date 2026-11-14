@@ -1,26 +1,22 @@
 package com.roadstudy.application.study;
 
-import java.io.ByteArrayInputStream;
-
 import com.roadstudy.application.study.exception.StudyExplanationException;
-import com.roadstudy.application.study.port.out.AudioStorage;
-import com.roadstudy.application.study.port.out.DocumentReader;
-import com.roadstudy.application.study.port.out.SpeechSynthesizer;
-import com.roadstudy.application.study.port.out.StudyGenerator;
-import com.roadstudy.application.study.port.out.StudyRepository;
+import com.roadstudy.application.study.model.ExtractedStudyText;
+import com.roadstudy.application.study.model.StudyExplanation;
+import com.roadstudy.application.study.port.out.*;
+import com.roadstudy.application.study.service.StudyModifyService;
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.domain.study.StudyStatus;
 import com.roadstudy.global.exception.FailureType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @DisplayName("학습 대본 생성 입력 길이 검증")
 class StudyModifyServiceTests {

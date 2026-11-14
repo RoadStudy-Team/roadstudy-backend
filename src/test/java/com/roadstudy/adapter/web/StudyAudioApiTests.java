@@ -1,20 +1,11 @@
 package com.roadstudy.adapter.web;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Map;
-import java.util.UUID;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.roadstudy.adapter.storage.LocalAudioStorage;
 import com.roadstudy.application.study.exception.StudyAudioException;
-import com.roadstudy.application.study.port.out.AudioStorage;
-import com.roadstudy.application.study.port.out.DocumentReader;
-import com.roadstudy.application.study.port.out.SpeechSynthesizer;
-import com.roadstudy.application.study.port.out.StudyGenerator;
-import com.roadstudy.application.study.port.out.StudyRepository;
-import com.roadstudy.application.study.StudyModifyService;
-import com.roadstudy.application.study.StudyQueryService;
+import com.roadstudy.application.study.port.out.*;
+import com.roadstudy.application.study.service.StudyModifyService;
+import com.roadstudy.application.study.service.StudyQueryService;
 import com.roadstudy.global.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,16 +19,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @DisplayName("학습 음성 생성·조회 API")
 class StudyAudioApiTests {

@@ -1,12 +1,5 @@
 package com.roadstudy.adapter.web;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.texttospeech.v1.SynthesizeSpeechRequest;
 import com.google.cloud.texttospeech.v1.SynthesizeSpeechResponse;
@@ -16,12 +9,12 @@ import com.roadstudy.adapter.pdf.PdfBoxDocumentReader;
 import com.roadstudy.adapter.storage.LocalAudioStorage;
 import com.roadstudy.adapter.tts.GoogleSpeechSynthesizer;
 import com.roadstudy.application.study.InMemoryStudyRepository;
-import com.roadstudy.application.study.StudyExplanation;
-import com.roadstudy.application.study.StudyModifyService;
-import com.roadstudy.application.study.StudyQueryService;
 import com.roadstudy.application.study.exception.StudyExplanationException;
+import com.roadstudy.application.study.model.StudyExplanation;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.application.study.port.out.StudyGenerator;
+import com.roadstudy.application.study.service.StudyModifyService;
+import com.roadstudy.application.study.service.StudyQueryService;
 import com.roadstudy.global.exception.GlobalExceptionHandler;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -41,20 +34,20 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @DisplayName("학습 자동 생성·조회 API")
 class StudyGenerationApiTests {
