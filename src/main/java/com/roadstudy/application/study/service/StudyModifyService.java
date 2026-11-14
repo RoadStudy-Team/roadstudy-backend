@@ -7,7 +7,7 @@ import com.roadstudy.application.study.exception.StudyNotFoundException;
 import com.roadstudy.application.study.model.ExtractedStudyText;
 import com.roadstudy.application.study.model.StudyAudio;
 import com.roadstudy.application.study.model.StudyExplanation;
-import com.roadstudy.application.study.port.in.StartStudyGeneration;
+import com.roadstudy.application.study.port.in.GenerateStudy;
 import com.roadstudy.application.study.port.in.StudyGenerationSteps;
 import com.roadstudy.application.study.port.out.*;
 import com.roadstudy.domain.study.StudySession;
@@ -26,7 +26,7 @@ import java.util.concurrent.Executor;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StudyModifyService implements StudyGenerationSteps, StartStudyGeneration {
+public class StudyModifyService implements StudyGenerationSteps, GenerateStudy {
     private static final int MAX_FILE_BYTES = 50 * 1024 * 1024;
     private static final int MAX_GENERATION_CHARACTERS = 60_000;
     private static final int MAX_SCRIPT_BYTES = 30_000;
@@ -66,8 +66,8 @@ public class StudyModifyService implements StudyGenerationSteps, StartStudyGener
     }
 
     @Override
-    public StudySession start(String originalFileName, InputStream input) {
-        // 업로드 스트림은 요청이 끝나면 닫히므로 텍스트 추출과 입력 검증은 요청 안에서 끝낸다.
+    public StudySession generateStudyAsync(String originalFileName, InputStream input) {
+        // 요청이 끝나면 업로드 스트림이 닫히므로, 작업 등록 전에 텍스트 추출
         String text = extractGenerationText(input);
 
         StudySession session = studyRepository.save(StudySession.create(new StudySessionCreateRequest(originalFileName)));
@@ -124,13 +124,14 @@ public class StudyModifyService implements StudyGenerationSteps, StartStudyGener
             StudySession session = studyRepository.findById(studyId).orElseThrow(StudyNotFoundException::new);
             StudyExplanation explanation = studyGenerator.generateExplanation(text);
             session.changeExplanation(explanation.title(), explanation.summary(), explanation.explanationScript());
+
+            // 음성 생성이 실패해도 대본은 남도록 먼저 저장
             session = studyRepository.save(session);
 
             StudyAudio audio = generateAudio(explanation.explanationScript());
             session.complete(audio.path().toString());
             studyRepository.save(session);
         } catch (RuntimeException ex) {
-            // 응답을 이미 보낸 뒤라 예외를 전달할 곳이 없으므로 세션 상태로 실패를 남긴다.
             markFailed(studyId, ex);
         }
     }
@@ -140,7 +141,7 @@ public class StudyModifyService implements StudyGenerationSteps, StartStudyGener
         log.warn("학습 자동 생성에 실패했습니다. 세션 ID {}, 오류 코드 {}, 예외 유형 {}",
                 studyId, code, cause.getClass().getSimpleName());
         try {
-            // 저장에 실패한 변경이 섞이지 않도록 저장된 상태를 다시 읽어 실패 처리한다.
+            // DB에 마지막으로 저장된 세션을 다시 읽어 FAILED로 변경
             StudySession session = studyRepository.findById(studyId).orElseThrow(StudyNotFoundException::new);
             session.fail();
             studyRepository.save(session);

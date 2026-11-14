@@ -7,7 +7,7 @@ import com.roadstudy.application.study.model.ExtractedStudyText;
 import com.roadstudy.application.study.model.StudyAudio;
 import com.roadstudy.application.study.port.in.FindStudy;
 import com.roadstudy.application.study.port.in.FindStudyAudio;
-import com.roadstudy.application.study.port.in.StartStudyGeneration;
+import com.roadstudy.application.study.port.in.GenerateStudy;
 import com.roadstudy.application.study.port.in.StudyGenerationSteps;
 import com.roadstudy.domain.study.StudySession;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +30,7 @@ public class StudyController implements StudyControllerDocs {
 
     private final StudyGenerationSteps studyGenerationSteps;
     private final FindStudyAudio findStudyAudio;
-    private final StartStudyGeneration startStudyGeneration;
+    private final GenerateStudy generateStudy;
     private final FindStudy findStudy;
 
     @Override
@@ -43,7 +43,7 @@ public class StudyController implements StudyControllerDocs {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<StudyResponse> startGeneration(@RequestPart("file") MultipartFile file) throws IOException {
         try (var input = file.getInputStream()) {
-            StudySession session = startStudyGeneration.start(file.getOriginalFilename(), input);
+            StudySession session = generateStudy.generateStudyAsync(file.getOriginalFilename(), input);
             return ResponseEntity.accepted()
                     .location(URI.create("/api/studies/" + session.getId()))
                     .body(StudyResponse.from(session));

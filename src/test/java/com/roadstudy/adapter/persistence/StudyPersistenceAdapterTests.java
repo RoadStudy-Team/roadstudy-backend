@@ -95,7 +95,7 @@ class StudyPersistenceAdapterTests {
                 studyRepository,
                 script -> new byte[]{1}, storage, Runnable::run);
 
-        Long id = service.start("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
+        Long id = service.generateStudyAsync("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
         entityManager.flush();
         entityManager.clear();
 

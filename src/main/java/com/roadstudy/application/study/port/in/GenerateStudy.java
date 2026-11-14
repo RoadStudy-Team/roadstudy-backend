@@ -4,6 +4,6 @@ import com.roadstudy.domain.study.StudySession;
 
 import java.io.InputStream;
 
-public interface StartStudyGeneration {
-    StudySession start(String originalFileName, InputStream input);
+public interface GenerateStudy {
+    StudySession generateStudyAsync(String originalFileName, InputStream input);
 }
