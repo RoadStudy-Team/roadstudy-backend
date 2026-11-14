@@ -1,5 +1,23 @@
 package com.roadstudy.application.study;
 
+import com.roadstudy.application.study.exception.StudyExplanationException;
+import com.roadstudy.application.study.exception.StudyNotFoundException;
+import com.roadstudy.application.study.model.ExtractedStudyText;
+import com.roadstudy.application.study.model.StudyAudio;
+import com.roadstudy.application.study.model.StudyExplanation;
+import com.roadstudy.application.study.port.out.AudioStorage;
+import com.roadstudy.application.study.port.out.DocumentReader;
+import com.roadstudy.application.study.port.out.SpeechSynthesizer;
+import com.roadstudy.application.study.port.out.StudyGenerator;
+import com.roadstudy.application.study.service.StudyModifyService;
+import com.roadstudy.application.study.service.StudyQueryService;
+import com.roadstudy.domain.study.StudySession;
+import com.roadstudy.domain.study.StudyStatus;
+import com.roadstudy.global.exception.FailureType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -8,27 +26,10 @@ import java.util.Deque;
 import java.util.UUID;
 import java.util.concurrent.RejectedExecutionException;
 
-import com.roadstudy.application.study.exception.StudyExplanationException;
-import com.roadstudy.application.study.exception.StudyNotFoundException;
-import com.roadstudy.application.study.port.out.AudioStorage;
-import com.roadstudy.application.study.port.out.DocumentReader;
-import com.roadstudy.application.study.port.out.SpeechSynthesizer;
-import com.roadstudy.application.study.port.out.StudyGenerator;
-import com.roadstudy.domain.study.StudySession;
-import com.roadstudy.domain.study.StudyStatus;
-import com.roadstudy.global.exception.FailureType;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @DisplayName("학습 자동 생성")
 class StudyGenerationTests {
@@ -52,7 +53,7 @@ class StudyGenerationTests {
     @BeforeEach
     void setUp() {
         when(reader.read(DOCUMENT)).thenReturn(new ExtractedStudyText(1, TEXT));
-        when(generator.generate(TEXT)).thenReturn(EXPLANATION);
+        when(generator.generateExplanation(TEXT)).thenReturn(EXPLANATION);
         when(synthesizer.synthesize(EXPLANATION.explanationScript())).thenReturn(AUDIO_BYTES);
         when(storage.save(any(UUID.class), eq(AUDIO_BYTES)))
                 .thenAnswer(call -> new StudyAudio(call.getArgument(0), AUDIO_PATH));
@@ -61,7 +62,7 @@ class StudyGenerationTests {
     @Test
     @DisplayName("입력 검증을 마치면 처리 중인 세션을 저장해 반환하고 생성은 백그라운드로 넘긴다")
     void startsGenerationInBackground() throws Exception {
-        StudySession session = start();
+        StudySession session = generateStudyAsync();
 
         assertThat(session.getId()).isNotNull();
         assertThat(session.getOriginalFileName()).isEqualTo("lecture.pdf");
@@ -73,7 +74,7 @@ class StudyGenerationTests {
     @Test
     @DisplayName("백그라운드 생성이 끝나면 대본과 음성 경로를 저장하고 세션을 완료한다")
     void completesSessionInBackground() throws Exception {
-        Long id = start().getId();
+        Long id = generateStudyAsync().getId();
 
         runBackgroundTask();
 
@@ -93,7 +94,7 @@ class StudyGenerationTests {
         when(reader.read(DOCUMENT)).thenReturn(new ExtractedStudyText(1, "가".repeat(60_001)));
 
         assertThatExceptionOfType(StudyExplanationException.class)
-                .isThrownBy(this::start)
+                .isThrownBy(this::generateStudyAsync)
                 .satisfies(ex -> assertThat(ex.getCode()).isEqualTo("STUDY_TEXT_TOO_LONG"));
         assertThat(repository.savedStatuses()).isEmpty();
         assertThat(backgroundTasks).isEmpty();
@@ -102,8 +103,8 @@ class StudyGenerationTests {
     @Test
     @DisplayName("대본 생성이 실패하면 음성을 만들지 않고 세션을 실패 처리한다")
     void failsSessionWhenExplanationFails() throws Exception {
-        when(generator.generate(TEXT)).thenThrow(StudyExplanationException.generationFailed());
-        Long id = start().getId();
+        when(generator.generateExplanation(TEXT)).thenThrow(StudyExplanationException.generationFailed());
+        Long id = generateStudyAsync().getId();
 
         runBackgroundTask();
 
@@ -119,8 +120,8 @@ class StudyGenerationTests {
     void failsSessionWhenScriptExceedsSpeechLimit() throws Exception {
         // 한글 1,667자는 5,001바이트로 음성 합성 제한을 1바이트 넘는다.
         String script = "가".repeat(10_001);
-        when(generator.generate(TEXT)).thenReturn(new StudyExplanation("제목", "요약", script));
-        Long id = start().getId();
+        when(generator.generateExplanation(TEXT)).thenReturn(new StudyExplanation("제목", "요약", script));
+        Long id = generateStudyAsync().getId();
 
         runBackgroundTask();
 
@@ -137,7 +138,7 @@ class StudyGenerationTests {
     @DisplayName("예상하지 못한 예외가 나도 세션을 실패 처리하고 백그라운드 작업 밖으로 던지지 않는다")
     void failsSessionOnUnexpectedException() throws Exception {
         when(synthesizer.synthesize(EXPLANATION.explanationScript())).thenThrow(new IllegalStateException("예상하지 못한 오류"));
-        Long id = start().getId();
+        Long id = generateStudyAsync().getId();
 
         assertThatCode(this::runBackgroundTask).doesNotThrowAnyException();
 
@@ -153,7 +154,7 @@ class StudyGenerationTests {
         });
 
         assertThatExceptionOfType(RejectedExecutionException.class)
-                .isThrownBy(() -> rejectingService.start("lecture.pdf", new ByteArrayInputStream(DOCUMENT)));
+                .isThrownBy(() -> rejectingService.generateStudyAsync("lecture.pdf", new ByteArrayInputStream(DOCUMENT)));
         assertThat(repository.savedStatuses()).containsExactly(StudyStatus.PROCESSING, StudyStatus.FAILED);
         verifyNoInteractions(generator, synthesizer, storage);
     }
@@ -169,8 +170,8 @@ class StudyGenerationTests {
                 });
     }
 
-    private StudySession start() throws IOException {
-        return service.start("lecture.pdf", new ByteArrayInputStream(DOCUMENT));
+    private StudySession generateStudyAsync() throws IOException {
+        return service.generateStudyAsync("lecture.pdf", new ByteArrayInputStream(DOCUMENT));
     }
 
     private void runBackgroundTask() {

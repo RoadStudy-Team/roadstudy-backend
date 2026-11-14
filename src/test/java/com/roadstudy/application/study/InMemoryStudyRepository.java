@@ -1,16 +1,11 @@
 package com.roadstudy.application.study;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import com.roadstudy.application.study.port.out.StudyRepository;
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.domain.study.StudyStatus;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.*;
 
 /** 저장할 때마다 ID를 부여하고 그 시점의 상태를 기록하는 테스트용 저장소. */
 public class InMemoryStudyRepository implements StudyRepository {

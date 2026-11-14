@@ -1,11 +1,8 @@
 package com.roadstudy;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-
 import com.jayway.jsonpath.JsonPath;
-import com.roadstudy.application.study.ExtractedStudyText;
-import com.roadstudy.application.study.StudyExplanation;
+import com.roadstudy.application.study.model.ExtractedStudyText;
+import com.roadstudy.application.study.model.StudyExplanation;
 import com.roadstudy.application.study.port.out.DocumentReader;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.application.study.port.out.StudyGenerator;
@@ -25,6 +22,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
@@ -140,7 +140,7 @@ class RoadstudyApplicationTests {
     void completesUploadedStudyInBackground() throws Exception {
         byte[] audio = {(byte) 0xFF, (byte) 0xF3, 0x44, (byte) 0xC4};
         when(documentReader.read(any())).thenReturn(new ExtractedStudyText(1, "학습 자료"));
-        when(studyGenerator.generate("학습 자료")).thenReturn(new StudyExplanation("제목", "요약", "설명 대본"));
+        when(studyGenerator.generateExplanation("학습 자료")).thenReturn(new StudyExplanation("제목", "요약", "설명 대본"));
         when(speechSynthesizer.synthesize("설명 대본")).thenReturn(audio);
 
         String location = mvc.perform(multipart("/api/studies")

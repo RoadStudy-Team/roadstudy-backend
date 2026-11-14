@@ -1,9 +1,9 @@
 package com.roadstudy.adapter.web.response;
 
-import java.time.LocalDateTime;
-
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.domain.study.StudyStatus;
+
+import java.time.LocalDateTime;
 
 public record StudyListItemResponse(
         Long id, String originalFileName, String title, String summary, StudyStatus status, LocalDateTime createdAt

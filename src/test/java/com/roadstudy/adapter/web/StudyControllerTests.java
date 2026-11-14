@@ -1,22 +1,15 @@
 package com.roadstudy.adapter.web;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-
-import com.roadstudy.application.study.StudyQueryService;
-
 import com.roadstudy.adapter.pdf.PdfBoxDocumentReader;
 import com.roadstudy.application.study.exception.StudyExplanationException;
+import com.roadstudy.application.study.model.StudyExplanation;
 import com.roadstudy.application.study.port.in.FindStudy;
 import com.roadstudy.application.study.port.in.FindStudyAudio;
 import com.roadstudy.application.study.port.out.AudioStorage;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.application.study.port.out.StudyGenerator;
 import com.roadstudy.application.study.port.out.StudyRepository;
-import com.roadstudy.application.study.StudyExplanation;
-import com.roadstudy.application.study.StudyModifyService;
+import com.roadstudy.application.study.service.StudyModifyService;
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.global.exception.GlobalExceptionHandler;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -35,16 +28,18 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @DisplayName("PDF 텍스트 추출 API")
 class StudyControllerTests {
@@ -58,14 +53,38 @@ class StudyControllerTests {
             new PdfBoxDocumentReader(), generator, repository, mock(SpeechSynthesizer.class), mock(AudioStorage.class),
             Runnable::run);
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new StudyController(
-                    service, service, service, mock(FindStudyAudio.class), service, mock(FindStudy.class)))
+                    service, mock(FindStudyAudio.class), service, mock(FindStudy.class)))
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
 
     @Test
+    @DisplayName("업로드 스트림 읽기 실패는 세션 생성 전에 안전한 500 응답으로 변환한다")
+    void returnsSafeErrorWhenUploadReadFails() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "lecture.pdf",
+                MediaType.APPLICATION_PDF_VALUE, new byte[]{1}) {
+            @Override
+            public InputStream getInputStream() {
+                return new InputStream() {
+                    @Override
+                    public int read() throws IOException {
+                        throw new IOException("내부 파일 경로");
+                    }
+                };
+            }
+        };
+
+        mvc.perform(multipart("/api/studies").file(file))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("PDF_READ_FAILED"))
+                .andExpect(jsonPath("$.detail").value("업로드한 PDF를 읽지 못했습니다."));
+        verifyNoInteractions(generator, repository);
+    }
+
+    @Test
     @DisplayName("PDF에서 생성한 대본을 저장하고 세션 ID, 제목, 요약, 대본을 반환한다")
     void generatesExplanation() throws Exception {
-        when(generator.generate("Hello PDF")).thenReturn(new StudyExplanation("제목", "요약", "설명"));
+        when(generator.generateExplanation("Hello PDF")).thenReturn(new StudyExplanation("제목", "요약", "설명"));
         when(repository.save(any(StudySession.class))).thenAnswer(invocation -> {
             StudySession session = invocation.getArgument(0);
             ReflectionTestUtils.setField(session, "id", 42L);
@@ -101,7 +120,7 @@ class StudyControllerTests {
     @Test
     @DisplayName("생성 실패는 502로 반환하고 학습 세션을 저장하지 않는다")
     void returnsGenerationFailureWithoutSaving() throws Exception {
-        when(generator.generate("Hello PDF")).thenThrow(StudyExplanationException.generationFailed());
+        when(generator.generateExplanation("Hello PDF")).thenThrow(StudyExplanationException.generationFailed());
 
         mvc.perform(multipart(GENERATE_ENDPOINT).file(pdfFile("lecture.pdf", pdf("Hello PDF"))))
                 .andExpect(status().isBadGateway())

@@ -1,9 +1,9 @@
 package com.roadstudy.adapter.web.response;
 
-import java.nio.file.Path;
-
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.domain.study.StudyStatus;
+
+import java.nio.file.Path;
 
 public record StudyResponse(Long id, String originalFileName, StudyStatus status, String title, String summary,
                             String explanationScript, String audioUrl) {

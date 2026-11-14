@@ -1,10 +1,8 @@
-package com.roadstudy.application.study;
-
-import java.util.List;
-import java.util.UUID;
+package com.roadstudy.application.study.service;
 
 import com.roadstudy.application.study.exception.StudyAudioException;
 import com.roadstudy.application.study.exception.StudyNotFoundException;
+import com.roadstudy.application.study.model.StudyAudio;
 import com.roadstudy.application.study.port.in.FindStudy;
 import com.roadstudy.application.study.port.in.FindStudyAudio;
 import com.roadstudy.application.study.port.out.AudioStorage;
@@ -12,6 +10,9 @@ import com.roadstudy.application.study.port.out.StudyRepository;
 import com.roadstudy.domain.study.StudySession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor

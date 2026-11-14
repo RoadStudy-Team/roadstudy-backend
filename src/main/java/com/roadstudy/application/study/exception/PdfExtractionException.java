@@ -30,6 +30,11 @@ public class PdfExtractionException extends ApplicationException {
                 FailureType.UNPROCESSABLE_CONTENT);
     }
 
+    public static PdfExtractionException readFailed(Throwable cause) {
+        return new PdfExtractionException("PDF_READ_FAILED", "업로드한 PDF를 읽지 못했습니다.",
+                FailureType.INTERNAL_FAILURE, cause);
+    }
+
     public static PdfExtractionException extractionFailed(Throwable cause) {
         return new PdfExtractionException("PDF_EXTRACTION_FAILED", "PDF의 텍스트를 추출할 수 없습니다.",
                 FailureType.UNPROCESSABLE_CONTENT, cause);

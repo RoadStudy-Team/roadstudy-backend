@@ -1,8 +1,5 @@
 package com.roadstudy.config;
 
-import java.net.http.HttpClient;
-import java.time.Duration;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +7,9 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.util.Assert;
 import org.springframework.web.client.RestClient;
+
+import java.net.http.HttpClient;
+import java.time.Duration;
 
 @Configuration(proxyBeanMethods = false)
 public class OpenAiConfig {

@@ -1,16 +1,12 @@
 package com.roadstudy.adapter.persistence;
 
-import java.io.ByteArrayInputStream;
-import java.nio.file.Path;
-import java.util.UUID;
-
-import com.roadstudy.application.study.ExtractedStudyText;
-import com.roadstudy.application.study.StudyAudio;
+import com.roadstudy.application.study.model.ExtractedStudyText;
+import com.roadstudy.application.study.model.StudyAudio;
+import com.roadstudy.application.study.model.StudyExplanation;
 import com.roadstudy.application.study.port.out.AudioStorage;
 import com.roadstudy.application.study.port.out.SpeechSynthesizer;
 import com.roadstudy.application.study.port.out.StudyRepository;
-import com.roadstudy.application.study.StudyExplanation;
-import com.roadstudy.application.study.StudyModifyService;
+import com.roadstudy.application.study.service.StudyModifyService;
 import com.roadstudy.domain.study.StudySession;
 import com.roadstudy.domain.study.StudySessionCreateRequest;
 import com.roadstudy.domain.study.StudyStatus;
@@ -20,6 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+
+import java.io.ByteArrayInputStream;
+import java.nio.file.Path;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,7 +69,7 @@ class StudyPersistenceAdapterTests {
                 studyRepository,
                 mock(SpeechSynthesizer.class), mock(AudioStorage.class), Runnable::run);
 
-        Long id = service.generate("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
+        Long id = service.generateExplanation("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
         assertThat(id).isNotNull();
         entityManager.flush();
         entityManager.clear();
@@ -95,7 +95,7 @@ class StudyPersistenceAdapterTests {
                 studyRepository,
                 script -> new byte[]{1}, storage, Runnable::run);
 
-        Long id = service.start("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
+        Long id = service.generateStudyAsync("lecture.pdf", new ByteArrayInputStream(new byte[]{1})).getId();
         entityManager.flush();
         entityManager.clear();
 
