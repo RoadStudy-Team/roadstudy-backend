@@ -5,6 +5,7 @@ import com.roadstudy.adapter.web.response.StudySessionResponse;
 import com.roadstudy.application.study.port.in.FindStudy;
 import com.roadstudy.application.study.port.in.GenerateStudy;
 import com.roadstudy.application.study.exception.StudyAudioException;
+import com.roadstudy.application.study.exception.PdfExtractionException;
 import com.roadstudy.domain.study.StudySession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.*;
@@ -26,12 +27,14 @@ public class StudyController implements StudyControllerDocs {
 
     @Override
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<StudySessionResponse> generateStudyAsync(@RequestPart("file") MultipartFile file) throws IOException {
+    public ResponseEntity<StudySessionResponse> generateStudyAsync(@RequestPart("file") MultipartFile file) {
         try (InputStream input = file.getInputStream()) {
             StudySession session = generateStudy.generateStudyAsync(file.getOriginalFilename(), input);
 
             return ResponseEntity.accepted().location(URI.create("/api/studies/" + session.getId()))
                     .body(StudySessionResponse.from(findStudy.findById(session.getId())));
+        } catch (IOException ex) {
+            throw PdfExtractionException.readFailed(ex);
         }
     }
 

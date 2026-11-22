@@ -8,7 +8,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 
 public interface StudyControllerDocs {
@@ -17,7 +16,7 @@ public interface StudyControllerDocs {
     @ApiResponse(responseCode = "400", description = "빈 파일 또는 잘못된 PDF")
     @ApiResponse(responseCode = "413", description = "파일 용량 초과")
     @ApiResponse(responseCode = "422", description = "읽을 수 있는 학습 내용 없음")
-    ResponseEntity<StudySessionResponse> generateStudyAsync(MultipartFile file) throws IOException;
+    ResponseEntity<StudySessionResponse> generateStudyAsync(MultipartFile file);
 
     @Operation(summary = "학습 목록 조회")
     ResponseEntity<List<StudySessionResponse>> listStudies();
