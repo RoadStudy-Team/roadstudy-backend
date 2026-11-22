@@ -46,5 +46,26 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform { excludeTags 'live', 'postgres' }
+}
+
+tasks.register('liveStudyTest', Test) {
+    description = 'Explicit opt-in paid OpenAI and TTS evaluation'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { includeTags 'live' }
+    systemProperty 'roadstudy.live', 'true'
+    systemProperty 'roadstudy.pdf', providers.gradleProperty('studyPdf').getOrElse('')
+    outputs.upToDateWhen { false }
+}
+
+tasks.register('postgresTest', Test) {
+    description = 'Explicit opt-in tests against the disposable local roadstudy database'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { includeTags 'postgres' }
+    systemProperty 'roadstudy.postgres', 'true'
+    outputs.upToDateWhen { false }
 }
