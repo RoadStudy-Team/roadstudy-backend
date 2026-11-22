@@ -25,10 +25,12 @@ RoadStudy 백엔드는 PDF 학습 자료 처리, AI 학습 설명 생성, 음성
 | 기능 | 설명 |
 | --- | --- |
 | PDF 텍스트 추출 | 업로드한 PDF 학습 자료에서 텍스트 추출 |
-| AI 학습 설명 생성 | OpenAI API를 활용해 학습용 설명 대본 생성 |
+| 챕터형 학습 생성 | 전체 자료 분석과 강의 계획을 바탕으로 챕터별 기본 강의 생성 |
+| 더 자세히 듣기 | 선택한 챕터의 단계·이유·예시를 보강한 상세 버전 생성·재사용 |
+| 원문 근거 및 검증 | 페이지 근거 보존, 의심되는 핵심 주장만 OpenAI 웹 검색으로 확인 |
 | 음성 합성 | Google Cloud TTS로 설명 대본을 한국어 MP3로 합성 |
 | 비동기 학습 생성 | PDF 텍스트 추출·검증 후 대본과 음성 생성을 백그라운드에서 처리 |
-| 학습 데이터 관리 | PostgreSQL에 학습 세션, 대본, 음성 파일 경로 저장·조회 |
+| 학습 데이터 관리 | PostgreSQL에 세션·챕터·기본/상세 버전과 생성 단계 저장·조회 |
 | 음성 스트리밍 | 로컬에 저장한 MP3 제공 및 HTTP Range 요청 지원 |
 
 ### 학습 콘텐츠 생성 흐름
@@ -36,17 +38,17 @@ RoadStudy 백엔드는 PDF 학습 자료 처리, AI 학습 설명 생성, 음성
 ```text
 PDF 학습 자료 업로드
         ↓
-PDFBox 텍스트 추출·검증
+원본 PDF 보관 / PDFBox 페이지별 텍스트 추출
         ↓
 학습 세션 저장 및 요청 접수 응답 (202 Accepted)
         ↓
-OpenAI 학습 설명 대본 생성 (백그라운드)
+전체 분석 / 필요한 외부 검증 / 강의 계획 수립
         ↓
-Google Cloud TTS 음성 합성 (백그라운드)
+앞 챕터부터 대본 생성·검토 / Google TTS 음성 합성
         ↓
-MP3 로컬 저장 및 학습 세션 갱신
+챕터별 MP3 저장 / 완료된 챕터부터 제공
         ↓
-학습 상태 조회 / 저장된 MP3 재생
+전체 기본 강의 듣기 / 선택한 챕터 더 자세히 듣기
         ↓
 RoadStudy 차량용 앱
 ```
@@ -56,7 +58,17 @@ RoadStudy 차량용 앱
 백엔드는 Ports & Adapters 아키텍처를 기반으로 구성합니다.
 
 ### Hexagonal Architecture
-![RoadStudy 백엔드 헥사고날 아키텍처](docs/images/roadstudy-backend-architecture.png)
+```mermaid
+flowchart LR
+    App[RoadStudy App] --> Web[StudyController]
+    Web --> In[Inbound Ports]
+    In --> Service[StudyModifyService / StudyQueryService]
+    Service --> Domain[StudySession / StudyChapter / StudyAudio]
+    Service --> Out[Outbound Ports]
+    Out --> Adapters[JPA / PDFBox / OpenAI / Google TTS / Local Storage]
+```
+
+[챕터 생성 설계와 설정](docs/chapter-generation.md) · [API 연동 계약](docs/study-api.md)
 
 ```text
 roadstudy-backend/
@@ -100,6 +112,7 @@ DB_PASSWORD=your_local_password
 DB_PORT=5433
 SPRING_JPA_HIBERNATE_DDL_AUTO=update
 OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-5.4-mini
 GOOGLE_APPLICATION_CREDENTIALS=C:/secrets/roadstudy-tts.json
 ```
 
@@ -131,7 +144,7 @@ Windows
 .\gradlew.bat bootRun
 ```
 
-생성된 MP3는 기본적으로 실행 디렉터리 기준 `storage/audio`에 저장됩니다. `AUDIO_STORAGE_PATH`로 저장 위치를 변경할 수 있습니다.
+원본 PDF와 추출 텍스트는 기본적으로 `storage/sources`, MP3는 `storage/audio`에 저장됩니다. `STUDY_SOURCE_PATH`와 `AUDIO_STORAGE_PATH`로 변경할 수 있습니다. 단일 서버의 영속 디렉터리를 사용합니다.
 
 ## ⚙️ 테스트 환경 및 필요한 설정
 
@@ -161,11 +174,13 @@ Windows
 .\gradlew.bat test
 ```
 
-자동 테스트는 H2와 모의 외부 클라이언트를 사용해 HTTP 응답, 학습 상태 전이, 음성 저장·조회 등을 검증합니다.
+일반 자동 테스트는 H2와 모의 외부 클라이언트를 사용해 HTTP 응답, 상태 전이, 부분 실패, 중복 요청, 단계별 재시도, 음성 저장·조회 등을 검증합니다. 실제 유료 API는 호출하지 않습니다.
+
+실제 PostgreSQL 검증과 유료 PDF 평가는 별도 작업으로 분리했습니다. 실행 방법과 DB 초기화 범위는 [검증 안내](docs/chapter-generation.md#실행과-검증)를 확인해 주세요. [대표 PDF 평가 기록](docs/representative-evaluation.md)
 
 ### Swagger API 문서
 
-[Swagger UI](http://localhost:8080/swagger-ui/index.html)에서 `POST /api/studies`로 PDF를 올립니다. 응답의 `Location` 주소에서 상태를 조회하고, `COMPLETED`가 되면 응답의 `audioUrl`로 MP3를 재생할 수 있습니다.
+[Swagger UI](http://localhost:8080/swagger-ui/index.html)에서 `POST /api/studies`로 PDF를 올립니다. 응답의 `Location` 주소에서 챕터별 상태를 조회하고, 각 음성 버전이 `READY`가 되면 해당 `audioUrl`로 재생할 수 있습니다. 전체 완료 전에도 완성된 챕터를 제공하며, 상세 버전은 별도로 요청합니다. 기존 단일 음성 MVP API와는 응답 구조가 다릅니다.
 
 ## 📱 프론트엔드 및 APK 안내
 

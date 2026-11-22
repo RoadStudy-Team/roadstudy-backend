@@ -29,6 +29,7 @@ public class GoogleSpeechSynthesizer implements SpeechSynthesizer {
     public GoogleSpeechSynthesizer(ObjectProvider<TextToSpeechClient> clientProvider,
                                    @Value("${GOOGLE_TTS_VOICE:ko-KR-Neural2-A}") String voiceName,
                                    @Value("${GOOGLE_TTS_SPEAKING_RATE:1.0}") double speakingRate) {
+
         Assert.hasText(voiceName, "GOOGLE_TTS_VOICE에 음성 이름을 설정해야 합니다.");
         Assert.isTrue(speakingRate >= 0.25 && speakingRate <= 2.0,
                 "GOOGLE_TTS_SPEAKING_RATE는 0.25 이상 2.0 이하로 설정해야 합니다.");
@@ -60,7 +61,7 @@ public class GoogleSpeechSynthesizer implements SpeechSynthesizer {
     }
 
     private ByteString synthesizeChunk(String script) {
-        var request = SynthesizeSpeechRequest.newBuilder()
+        SynthesizeSpeechRequest request = SynthesizeSpeechRequest.newBuilder()
                 .setInput(SynthesisInput.newBuilder().setText(script))
                 .setVoice(voice)
                 .setAudioConfig(audioConfig)
@@ -76,6 +77,10 @@ public class GoogleSpeechSynthesizer implements SpeechSynthesizer {
             log.warn("Google TTS 호출에 실패했습니다. 상태 코드 {}", status);
             if (status == StatusCode.Code.DEADLINE_EXCEEDED) {
                 throw StudyAudioException.generationTimedOut(ex);
+            }
+            if (status == StatusCode.Code.UNAVAILABLE || status == StatusCode.Code.RESOURCE_EXHAUSTED
+                    || status == StatusCode.Code.INTERNAL) {
+                throw StudyAudioException.temporarilyUnavailable(ex);
             }
             throw StudyAudioException.generationFailed(ex);
         } catch (BeansException ex) {

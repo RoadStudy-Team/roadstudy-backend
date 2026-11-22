@@ -1,11 +1,14 @@
 package com.roadstudy.application.study.port.in;
 
-import com.roadstudy.domain.study.StudySession;
+import com.roadstudy.application.study.model.StudySessionView;
 
+import java.nio.file.Path;
 import java.util.List;
 
 public interface FindStudy {
-    StudySession findById(Long studyId);
+    StudySessionView findById(Long sessionId);
 
-    List<StudySession> findAll();
+    List<StudySessionView> findAll();
+
+    Path findAudio(Long audioId);
 }

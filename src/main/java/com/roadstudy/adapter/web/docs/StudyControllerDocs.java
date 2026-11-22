@@ -1,124 +1,60 @@
 package com.roadstudy.adapter.web.docs;
 
-import com.roadstudy.adapter.web.request.GenerateAudioRequest;
-import com.roadstudy.adapter.web.response.*;
+import com.roadstudy.adapter.web.response.StudySessionResponse;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.core.io.Resource;
-import org.springframework.http.MediaType;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 
 public interface StudyControllerDocs {
-    @Operation(summary = "학습 세션 목록 조회", description = "등록된 학습 세션을 최신 등록순으로 반환합니다.")
-    @ApiResponse(responseCode = "200", description = "목록 조회 성공. 등록된 세션이 없으면 빈 배열을 반환합니다.",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    array = @ArraySchema(schema = @Schema(implementation = StudyListItemResponse.class))))
-    ResponseEntity<List<StudyListItemResponse>> listStudies();
+    @Operation(summary = "챕터형 학습 생성", description = "PDF 한 개를 보관하고 전체 분석·강의 계획·기본 챕터를 순서대로 생성합니다. 완료된 챕터부터 재생 가능합니다.")
+    @ApiResponse(responseCode = "202", description = "접수 완료. Location에서 진행 상태 조회")
+    @ApiResponse(responseCode = "400", description = "빈 파일 또는 잘못된 PDF")
+    @ApiResponse(responseCode = "413", description = "파일 용량 초과")
+    @ApiResponse(responseCode = "422", description = "읽을 수 있는 학습 내용 없음")
+    ResponseEntity<StudySessionResponse> generateStudyAsync(MultipartFile file);
 
-    @Operation(summary = "PDF 텍스트 추출", description = "최대 50MB의 PDF를 업로드해 전체 페이지의 텍스트를 추출합니다.")
-    @ApiResponse(responseCode = "200", description = "텍스트 추출 성공",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(implementation = ExtractTextResponse.class)))
-    @ApiResponse(responseCode = "400", description = "빈 파일 또는 잘못된 PDF",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "413", description = "업로드 용량 초과",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "422", description = "텍스트가 없거나 추출할 수 없는 PDF",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    ResponseEntity<ExtractTextResponse> extractText(MultipartFile file) throws IOException;
+    @Operation(summary = "학습 목록 조회")
+    ResponseEntity<List<StudySessionResponse>> listStudies();
 
-    @Operation(summary = "학습 설명 대본 생성", description = "최대 50MB의 PDF에서 약 5분 분량의 한국어 학습 설명 대본을 생성합니다.")
-    @ApiResponse(responseCode = "200", description = "대본 생성 및 저장 성공. 학습 세션 ID를 반환합니다.",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(implementation = StudyExplanationResponse.class)))
-    @ApiResponse(responseCode = "400", description = "빈 파일 또는 잘못된 PDF",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "413", description = "업로드 용량 초과",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "422", description = "텍스트를 추출할 수 없거나 생성 입력 길이 초과",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "502", description = "외부 서비스 호출 실패 또는 잘못된 생성 결과",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "504", description = "외부 서비스 응답 시간 초과",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    ResponseEntity<StudyExplanationResponse> generateExplanation(MultipartFile file) throws IOException;
+    @Operation(summary = "강의·챕터·기본 및 상세 버전 조회", description = "기본 버전만 챕터 순서대로 전체 재생합니다. 미완성 챕터는 안내 후 건너뛰며 상세 버전은 사용자가 별도로 선택합니다.")
+    @ApiResponse(responseCode = "404", description = "세션 없음")
+    ResponseEntity<StudySessionResponse> getStudy(Long sessionId);
 
-    @Operation(summary = "학습 자동 생성 시작",
-            description = "최대 50MB의 PDF를 업로드하면 텍스트 추출과 입력 검증을 마친 뒤 바로 응답하고, "
-                    + "대본 생성과 음성 생성은 백그라운드에서 이어서 처리합니다. 진행 상태는 학습 세션 조회로 확인합니다.")
-    @ApiResponse(responseCode = "202", description = "생성 요청 접수. 처리 중인 학습 세션과 조회 주소(Location)를 반환합니다.",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(implementation = StudyResponse.class)))
-    @ApiResponse(responseCode = "400", description = "빈 파일 또는 잘못된 PDF",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "413", description = "업로드 용량 초과",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "422", description = "텍스트를 추출할 수 없거나 생성 입력 길이 초과",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    ResponseEntity<StudyResponse> startGeneration(MultipartFile file) throws IOException;
+    @Operation(summary = "PDF 업로드 후 전체 기본 학습 생성 재시도", description = """
+            - 사용 시점: PDF 업로드로 접수된 세션의 기본 학습 생성이 실패하거나 중단된 경우
+            - 처리 범위: 학습 계획 생성부터 각 챕터의 기본 대본·음성 생성까지 미완료 작업 재시도
+            - PDF 재업로드 불필요. 저장된 자료·계획·대본을 재사용하고 완료된 기본 오디오는 유지
+            - 상세 버전은 대상에서 제외. 특정 기본·상세 오디오만 재시도하려면 오디오 단위 재시도 API 사용
+            - 이미 전체 생성 작업이 실행 중이면 추가 작업 없이 현재 상태 반환
+            - 비동기 접수 후 GET /api/studies/{sessionId}로 진행 상태 확인
+            """)
+    @ApiResponse(responseCode = "202", description = "재시도 요청 접수. 응답은 현재 세션 상태이며 생성 완료를 의미하지 않음")
+    ResponseEntity<StudySessionResponse> retryGeneration(Long sessionId);
 
-    @Operation(summary = "학습 세션 조회",
-            description = "학습 세션의 처리 상태와 결과를 조회합니다. 상태는 PROCESSING, COMPLETED, FAILED 중 하나이며 "
-                    + "COMPLETED일 때 audioUrl로 MP3를 재생할 수 있습니다.")
-    @ApiResponse(responseCode = "200", description = "학습 세션 조회 성공",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(implementation = StudyResponse.class)))
-    @ApiResponse(responseCode = "404", description = "학습 세션 없음",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    ResponseEntity<StudyResponse> getStudy(Long studyId);
+    @Operation(summary = "챕터 더 자세히 듣기 생성", description = "학습 목표와 난이도를 유지하며 단계·이유·예시를 보강합니다. 챕터당 한 버전만 보관하고 완료 결과를 재사용합니다.")
+    ResponseEntity<StudySessionResponse> generateDetailedAudio(Long sessionId, Long chapterId);
 
-    @Operation(summary = "학습 음성 생성 (임시)",
-            description = "UTF-8 기준 최대 30,000바이트의 설명 대본을 한국어 MP3로 변환해 저장합니다.")
-    @ApiResponse(responseCode = "200", description = "음성 생성 성공",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(implementation = StudyAudioResponse.class)))
-    @ApiResponse(responseCode = "400", description = "대본이 없거나 요청 본문이 잘못됨",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "422", description = "음성 합성 입력 길이 초과",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "500", description = "음성 파일 저장 실패",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "502", description = "음성 합성 서비스 호출 실패",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "504", description = "음성 합성 서비스 응답 시간 초과",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    ResponseEntity<StudyAudioResponse> generateAudio(GenerateAudioRequest request);
+    @Operation(summary = "특정 챕터의 기본·상세 오디오 하나 재시도", description = """
+            - 사용 시점: 특정 챕터의 기본 또는 상세 오디오 생성이 실패하거나 중단된 경우
+            - 처리 범위: audioId로 지정한 오디오 하나의 미완료 단계만 재시도
+            - sessionId·chapterId·audioId는 세션 조회 응답에서 확인. 해당 세션과 챕터에 속한 오디오만 요청 가능
+            - 예: 대본 검토 후 TTS가 실패했다면 저장된 대본으로 음성 생성부터 재시도
+            - 다른 챕터와 다른 버전은 그대로 유지. 지정한 오디오가 이미 생성 중이거나 완료된 경우 추가 생성 없음
+            - 상세 오디오를 처음 만들려면 챕터 더 자세히 듣기 생성 API 사용
+            - 비동기 접수 후 GET /api/studies/{sessionId}로 해당 오디오 상태 확인
+            """)
+    @ApiResponse(responseCode = "202", description = "재시도 요청 접수. 응답은 현재 세션 상태이며 생성 완료를 의미하지 않음")
+    ResponseEntity<StudySessionResponse> retryAudioGeneration(Long sessionId, Long chapterId, Long audioId);
 
-    @Operation(summary = "학습 음성 조회 (임시)", description = "생성 API가 반환한 audioId로 저장된 MP3를 내려받거나 재생합니다.")
-    @ApiResponse(responseCode = "200", description = "MP3 반환",
-            content = @Content(mediaType = "audio/mpeg", schema = @Schema(type = "string", format = "binary")))
-    @ApiResponse(responseCode = "404", description = "음성 파일 없음",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    @ApiResponse(responseCode = "206", description = "MP3 구간 반환",
-            content = @Content(mediaType = "audio/mpeg", schema = @Schema(type = "string", format = "binary")))
-    @ApiResponse(responseCode = "416", description = "음성 구간 요청 오류",
-            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    schema = @Schema(implementation = ProblemDetail.class)))
-    ResponseEntity<Resource> getAudio(String audioId, String rangeHeader) throws IOException;
+    @Operation(summary = "완성된 챕터 음성 재생")
+    @ApiResponse(responseCode = "200", content = @Content(mediaType = "audio/mpeg", schema = @Schema(type = "string", format = "binary")))
+    @ApiResponse(responseCode = "206", content = @Content(mediaType = "audio/mpeg", schema = @Schema(type = "string", format = "binary")))
+    @ApiResponse(responseCode = "416", description = "잘못된 재생 구간")
+    @ApiResponse(responseCode = "404", description = "준비된 음성 없음")
+    ResponseEntity<Resource> getAudio(Long audioId, String range);
 }

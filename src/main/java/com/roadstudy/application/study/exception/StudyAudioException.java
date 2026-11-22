@@ -4,6 +4,12 @@ import com.roadstudy.global.exception.ApplicationException;
 import com.roadstudy.global.exception.FailureType;
 
 public class StudyAudioException extends ApplicationException {
+    private boolean retryable;
+
+    public boolean isRetryable() {
+        return retryable;
+    }
+
     private StudyAudioException(String code, String message, FailureType type) {
         this(code, message, type, null);
     }
@@ -30,6 +36,12 @@ public class StudyAudioException extends ApplicationException {
                 "음성 합성 서비스 호출에 실패했습니다.", FailureType.EXTERNAL_SERVICE_FAILURE, cause);
     }
 
+    public static StudyAudioException temporarilyUnavailable(Throwable cause) {
+        StudyAudioException failure = generationFailed(cause);
+        failure.retryable = true;
+        return failure;
+    }
+
     public static StudyAudioException generationTimedOut() {
         return generationTimedOut(null);
     }
@@ -41,6 +53,11 @@ public class StudyAudioException extends ApplicationException {
 
     public static StudyAudioException notFound() {
         return new StudyAudioException("AUDIO_NOT_FOUND", "요청한 음성 파일을 찾을 수 없습니다.", FailureType.NOT_FOUND);
+    }
+
+    public static StudyAudioException readFailed(Throwable cause) {
+        return new StudyAudioException("AUDIO_READ_FAILED",
+                "음성 파일을 읽지 못했습니다.", FailureType.INTERNAL_FAILURE, cause);
     }
 
     public static StudyAudioException storageFailed() {
