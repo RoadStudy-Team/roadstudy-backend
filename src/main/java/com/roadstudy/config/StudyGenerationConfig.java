@@ -18,8 +18,10 @@ public class StudyGenerationConfig {
     }
 
     @Bean
-    ThreadPoolTaskExecutor studyGenerationExecutor(@Value("${STUDY_GENERATION_THREADS:2}") int threads,
+    ThreadPoolTaskExecutor studyGenerationExecutor(
+            @Value("${STUDY_GENERATION_THREADS:2}") int threads,
             @Value("${STUDY_GENERATION_QUEUE_CAPACITY:32}") int capacity) {
+
         Assert.isTrue(threads > 0, "STUDY_GENERATION_THREADS는 0보다 커야 합니다.");
         Assert.isTrue(capacity >= 0, "STUDY_GENERATION_QUEUE_CAPACITY는 음수일 수 없습니다.");
 
