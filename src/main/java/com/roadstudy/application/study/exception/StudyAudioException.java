@@ -4,6 +4,12 @@ import com.roadstudy.global.exception.ApplicationException;
 import com.roadstudy.global.exception.FailureType;
 
 public class StudyAudioException extends ApplicationException {
+    private boolean retryable;
+
+    public boolean isRetryable() {
+        return retryable;
+    }
+
     private StudyAudioException(String code, String message, FailureType type) {
         this(code, message, type, null);
     }
@@ -28,6 +34,12 @@ public class StudyAudioException extends ApplicationException {
     public static StudyAudioException generationFailed(Throwable cause) {
         return new StudyAudioException("TTS_GENERATION_FAILED",
                 "음성 합성 서비스 호출에 실패했습니다.", FailureType.EXTERNAL_SERVICE_FAILURE, cause);
+    }
+
+    public static StudyAudioException temporarilyUnavailable(Throwable cause) {
+        StudyAudioException failure = generationFailed(cause);
+        failure.retryable = true;
+        return failure;
     }
 
     public static StudyAudioException generationTimedOut() {

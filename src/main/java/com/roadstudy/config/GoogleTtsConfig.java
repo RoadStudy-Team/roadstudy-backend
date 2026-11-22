@@ -24,14 +24,14 @@ public class GoogleTtsConfig {
                                           @Value("${GOOGLE_TTS_TIMEOUT_SECONDS:60}") long timeoutSeconds) throws IOException {
         Assert.isTrue(timeoutSeconds > 0, "GOOGLE_TTS_TIMEOUT_SECONDS는 0보다 커야 합니다.");
 
-        var settings = TextToSpeechSettings.newBuilder();
-        // HTTP 요청 안에서 합성하므로 자동 재시도 없이 호출 제한 시간을 적용한다.
+        TextToSpeechSettings.Builder settings = TextToSpeechSettings.newBuilder();
+        // SDK 자동 재시도 방지, 서비스에서 재시도 횟수 관리
         settings.synthesizeSpeechSettings()
                 .setSimpleTimeoutNoRetriesDuration(Duration.ofSeconds(timeoutSeconds));
 
         if (StringUtils.hasText(credentialsPath)) {
-            try (var input = Files.newInputStream(Path.of(credentialsPath))) {
-                var credentials = ServiceAccountCredentials.fromStream(input)
+            try (java.io.InputStream input = Files.newInputStream(Path.of(credentialsPath))) {
+                com.google.auth.oauth2.GoogleCredentials credentials = ServiceAccountCredentials.fromStream(input)
                         .createScoped(TextToSpeechSettings.getDefaultServiceScopes());
                 settings.setCredentialsProvider(FixedCredentialsProvider.create(credentials));
             }
