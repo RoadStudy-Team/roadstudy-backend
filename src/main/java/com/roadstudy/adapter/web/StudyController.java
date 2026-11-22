@@ -1,24 +1,19 @@
 package com.roadstudy.adapter.web;
 
 import com.roadstudy.adapter.web.docs.StudyControllerDocs;
-import com.roadstudy.adapter.web.request.GenerateAudioRequest;
-import com.roadstudy.adapter.web.response.*;
-import com.roadstudy.application.study.model.ExtractedStudyText;
-import com.roadstudy.application.study.model.StudyAudio;
+import com.roadstudy.adapter.web.response.StudySessionResponse;
 import com.roadstudy.application.study.port.in.FindStudy;
-import com.roadstudy.application.study.port.in.FindStudyAudio;
 import com.roadstudy.application.study.port.in.GenerateStudy;
-import com.roadstudy.application.study.port.in.StudyGenerationSteps;
+import com.roadstudy.application.study.exception.StudyAudioException;
 import com.roadstudy.domain.study.StudySession;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
+import org.springframework.core.io.*;
 import org.springframework.http.*;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.URI;
 import java.util.List;
 
@@ -26,85 +21,78 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/api/studies")
 public class StudyController implements StudyControllerDocs {
-    private static final MediaType AUDIO_MPEG = MediaType.parseMediaType("audio/mpeg");
-
-    private final StudyGenerationSteps studyGenerationSteps;
-    private final FindStudyAudio findStudyAudio;
     private final GenerateStudy generateStudy;
     private final FindStudy findStudy;
 
     @Override
-    @GetMapping
-    public ResponseEntity<List<StudyListItemResponse>> listStudies() {
-        return ResponseEntity.ok(findStudy.findAll().stream().map(StudyListItemResponse::from).toList());
-    }
-
-    @Override
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<StudyResponse> startGeneration(@RequestPart("file") MultipartFile file) throws IOException {
-        try (var input = file.getInputStream()) {
+    public ResponseEntity<StudySessionResponse> generateStudyAsync(@RequestPart("file") MultipartFile file) throws IOException {
+        try (InputStream input = file.getInputStream()) {
             StudySession session = generateStudy.generateStudyAsync(file.getOriginalFilename(), input);
-            return ResponseEntity.accepted()
-                    .location(URI.create("/api/studies/" + session.getId()))
-                    .body(StudyResponse.from(session));
+
+            return ResponseEntity.accepted().location(URI.create("/api/studies/" + session.getId()))
+                    .body(StudySessionResponse.from(findStudy.findById(session.getId())));
         }
     }
 
     @Override
-    @GetMapping("/{studyId}")
-    public ResponseEntity<StudyResponse> getStudy(@PathVariable("studyId") Long studyId) {
-        return ResponseEntity.ok(StudyResponse.from(findStudy.findById(studyId)));
+    @GetMapping
+    public ResponseEntity<List<StudySessionResponse>> listStudies() {
+        return ResponseEntity.ok(findStudy.findAll().stream().map(StudySessionResponse::from).toList());
     }
 
     @Override
-    @PostMapping(path = "/generate-explanation", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<StudyExplanationResponse> generateExplanation(@RequestPart("file") MultipartFile file) throws IOException {
-        try (var input = file.getInputStream()) {
-            StudySession session = studyGenerationSteps.generateExplanation(file.getOriginalFilename(), input);
-            return ResponseEntity.ok(StudyExplanationResponse.from(session));
-        }
+    @GetMapping("/{sessionId}")
+    public ResponseEntity<StudySessionResponse> getStudy(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(StudySessionResponse.from(findStudy.findById(sessionId)));
     }
 
     @Override
-    @PostMapping(path = "/extract-text", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ExtractTextResponse> extractText(@RequestPart("file") MultipartFile file) throws IOException {
-        try (var input = file.getInputStream()) {
-            ExtractedStudyText extractText = studyGenerationSteps.extractText(input);
-            return ResponseEntity.ok(ExtractTextResponse.from(file.getOriginalFilename(), extractText));
-        }
+    @PostMapping("/{sessionId}/retry")
+    public ResponseEntity<StudySessionResponse> retryGeneration(@PathVariable Long sessionId) {
+        generateStudy.retryGeneration(sessionId);
+        return ResponseEntity.accepted().body(StudySessionResponse.from(findStudy.findById(sessionId)));
     }
 
     @Override
-    @PostMapping(path = "/generate-audio", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<StudyAudioResponse> generateAudio(@RequestBody GenerateAudioRequest request) {
-        StudyAudio audio = studyGenerationSteps.generateAudio(request.explanationScript());
-        return ResponseEntity.ok(StudyAudioResponse.from(audio));
+    @PostMapping("/{sessionId}/chapters/{chapterId}/details")
+    public ResponseEntity<StudySessionResponse> generateDetailedAudio(@PathVariable Long sessionId, @PathVariable Long chapterId) {
+        generateStudy.generateDetailedAudioAsync(sessionId, chapterId);
+        return ResponseEntity.accepted().body(StudySessionResponse.from(findStudy.findById(sessionId)));
+    }
+
+    @Override
+    @PostMapping("/{sessionId}/chapters/{chapterId}/audios/{audioId}/retry")
+    public ResponseEntity<StudySessionResponse> retryAudioGeneration(@PathVariable Long sessionId, @PathVariable Long chapterId, @PathVariable Long audioId) {
+        generateStudy.retryAudioGeneration(sessionId, chapterId, audioId);
+        return ResponseEntity.accepted().body(StudySessionResponse.from(findStudy.findById(sessionId)));
     }
 
     @Override
     @GetMapping("/audio/{audioId}")
-    public ResponseEntity<Resource> getAudio(
-            @PathVariable("audioId") String audioId,
-            @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader) throws IOException {
-        var audio = findStudyAudio.find(audioId);
-        var resource = new FileSystemResource(audio.path());
-        validateRange(rangeHeader, resource);
-        return ResponseEntity.ok()
-                .contentType(AUDIO_MPEG)
-                .body(resource);
+    public ResponseEntity<Resource> getAudio(@PathVariable Long audioId,
+            @RequestHeader(value = HttpHeaders.RANGE, required = false) String range) {
+        Resource resource = new FileSystemResource(findStudy.findAudio(audioId));
+        validateRange(range, resource);
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType("audio/mpeg")).body(resource);
     }
 
-    private static void validateRange(String rangeHeader, Resource resource) throws IOException {
-        if (rangeHeader == null) {
+    private static void validateRange(String range, Resource resource) {
+        if (range == null)
             return;
-        }
-        long contentLength = resource.contentLength();
+
+        long length;
         try {
-            HttpRange.toResourceRegions(HttpRange.parseRanges(rangeHeader), resource);
+            length = resource.contentLength();
+        } catch (IOException ex) {
+            throw StudyAudioException.readFailed(ex);
+        }
+
+        try {
+            HttpRange.toResourceRegions(HttpRange.parseRanges(range), resource);
         } catch (IllegalArgumentException ex) {
-            var failure = new ErrorResponseException(
-                    HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
-            failure.getHeaders().set(HttpHeaders.CONTENT_RANGE, "bytes */" + contentLength);
+            ErrorResponseException failure = new ErrorResponseException(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
+            failure.getHeaders().set(HttpHeaders.CONTENT_RANGE, "bytes */" + length);
             throw failure;
         }
     }

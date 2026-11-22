@@ -30,6 +30,12 @@ public class PdfExtractionException extends ApplicationException {
                 FailureType.UNPROCESSABLE_CONTENT);
     }
 
+    public static PdfExtractionException documentTooLong() {
+        return new PdfExtractionException(
+                "STUDY_SOURCE_TOO_LONG", "한 번에 처리할 수 있는 자료 범위를 초과했습니다. PDF를 나누어 업로드해 주세요.",
+                FailureType.UNPROCESSABLE_CONTENT);
+    }
+
     public static PdfExtractionException readFailed(Throwable cause) {
         return new PdfExtractionException("PDF_READ_FAILED", "업로드한 PDF를 읽지 못했습니다.",
                 FailureType.INTERNAL_FAILURE, cause);

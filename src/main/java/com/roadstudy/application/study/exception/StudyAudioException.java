@@ -55,6 +55,11 @@ public class StudyAudioException extends ApplicationException {
         return new StudyAudioException("AUDIO_NOT_FOUND", "요청한 음성 파일을 찾을 수 없습니다.", FailureType.NOT_FOUND);
     }
 
+    public static StudyAudioException readFailed(Throwable cause) {
+        return new StudyAudioException("AUDIO_READ_FAILED",
+                "음성 파일을 읽지 못했습니다.", FailureType.INTERNAL_FAILURE, cause);
+    }
+
     public static StudyAudioException storageFailed() {
         return storageFailed(null);
     }

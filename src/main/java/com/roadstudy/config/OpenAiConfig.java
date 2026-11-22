@@ -19,9 +19,9 @@ public class OpenAiConfig {
                                 @Value("${OPENAI_READ_TIMEOUT_SECONDS:120}") long readTimeoutSeconds) {
         Assert.hasText(apiKey, "OpenAI 클라이언트를 사용하려면 OPENAI_API_KEY 환경변수를 설정해야 합니다.");
 
-        var httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+        HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
-        var requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(Duration.ofSeconds(readTimeoutSeconds));
 
         return builder.baseUrl("https://api.openai.com/v1")

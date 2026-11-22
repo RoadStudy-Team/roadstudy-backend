@@ -1,7 +1,7 @@
 package com.roadstudy.adapter.storage;
 
 import com.roadstudy.application.study.exception.StudyAudioException;
-import com.roadstudy.application.study.model.StudyAudio;
+import com.roadstudy.application.study.model.StoredAudio;
 import com.roadstudy.application.study.port.out.AudioStorage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +26,7 @@ public class LocalAudioStorage implements AudioStorage {
     }
 
     @Override
-    public StudyAudio save(UUID audioId, byte[] content) {
+    public StoredAudio save(UUID audioId, byte[] content) {
         Path target = pathOf(audioId);
         Path temp = null;
         try {
@@ -35,8 +35,7 @@ public class LocalAudioStorage implements AudioStorage {
             temp = Files.createTempFile(directory, audioId + "-", ".tmp");
             Files.write(temp, content);
             Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE);
-
-            return new StudyAudio(audioId, target);
+            return new StoredAudio(audioId, target);
         } catch (IOException ex) {
             deleteQuietly(temp);
             log.error("음성 파일을 저장하지 못했습니다. 예외 유형 {}", ex.getClass().getSimpleName());
@@ -45,13 +44,13 @@ public class LocalAudioStorage implements AudioStorage {
     }
 
     @Override
-    public Optional<StudyAudio> find(UUID audioId) {
+    public Optional<StoredAudio> find(UUID audioId) {
         Path path = pathOf(audioId);
         if (!Files.isRegularFile(path)) {
             return Optional.empty();
         }
 
-        return Optional.of(new StudyAudio(audioId, path));
+        return Optional.of(new StoredAudio(audioId, path));
     }
 
     private Path pathOf(UUID audioId) {
